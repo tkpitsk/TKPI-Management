@@ -1,3 +1,7 @@
+export const metadata = {
+  title: "TKPI Management | Dashboard",
+};
+
 export default function Dashboard() {
   return (
 
