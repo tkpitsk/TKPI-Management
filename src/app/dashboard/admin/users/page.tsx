@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import {
     BadgeCheck,
+    Briefcase,
+    HardHat,
+    IndianRupee,
     Plus,
     Search,
     ShieldCheck,
@@ -17,7 +20,11 @@ import EditUserModal from "@/components/users/EditUserModal";
 interface User {
     _id: string;
     userId: string;
-    role: "admin" | "manager" | "employee";
+    name?: string;
+    phone?: string;
+    role: "admin" | "manager" | "employee" | "labour";
+    salaryType?: "monthly" | "weekly" | "daily";
+    salaryAmount?: number;
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
@@ -26,6 +33,7 @@ interface User {
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const [pageError, setPageError] = useState("");
 
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("all");
@@ -36,11 +44,12 @@ export default function UsersPage() {
 
     const fetchUsers = async () => {
         try {
+            setPageError("");
             const res = await api.get("/users");
             setUsers(res.data || []);
         } catch (error) {
             console.error(error);
-            alert("Failed to fetch users");
+            setPageError("Failed to fetch users. Please refresh and try again.");
         } finally {
             setLoading(false);
         }
@@ -52,9 +61,13 @@ export default function UsersPage() {
 
     const filteredUsers = useMemo(() => {
         return users.filter((user) => {
+            const q = search.trim().toLowerCase();
+
             const matchesSearch =
-                !search ||
-                user.userId.toLowerCase().includes(search.toLowerCase());
+                !q ||
+                user.userId.toLowerCase().includes(q) ||
+                user.name?.toLowerCase().includes(q) ||
+                user.phone?.toLowerCase().includes(q);
 
             const matchesRole =
                 roleFilter === "all" ? true : user.role === roleFilter;
@@ -85,6 +98,10 @@ export default function UsersPage() {
                 return "border-purple-200 bg-purple-50 text-purple-700";
             case "manager":
                 return "border-blue-200 bg-blue-50 text-blue-700";
+            case "employee":
+                return "border-slate-200 bg-slate-50 text-slate-700";
+            case "labour":
+                return "border-amber-200 bg-amber-50 text-amber-700";
             default:
                 return "border-slate-200 bg-slate-50 text-slate-700";
         }
@@ -101,6 +118,12 @@ export default function UsersPage() {
             month: "short",
             year: "numeric",
         });
+
+    const formatSalary = (user: User) => {
+        if (!user.salaryAmount || user.salaryAmount <= 0) return "—";
+        const amount = new Intl.NumberFormat("en-IN").format(user.salaryAmount);
+        return `₹${amount}${user.salaryType ? ` / ${user.salaryType}` : ""}`;
+    };
 
     const handleDeactivate = async (id: string) => {
         const confirmDelete = window.confirm(
@@ -124,10 +147,6 @@ export default function UsersPage() {
     const handleEditUser = (user: User) => {
         setSelectedUser(user);
         setEditModalOpen(true);
-    };
-
-    const handleCreateUser = () => {
-        setCreateModalOpen(true);
     };
 
     if (loading) {
@@ -164,19 +183,18 @@ export default function UsersPage() {
 
     return (
         <div className="space-y-6 p-4 md:p-6">
-            {/* HEADER */}
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight text-text md:text-3xl">
                         User Management
                     </h1>
                     <p className="mt-1 text-sm text-text-muted">
-                        Create users, assign roles, reset passwords, and manage access.
+                        Create users, assign roles, manage wages, and control account access.
                     </p>
                 </div>
 
                 <button
-                    onClick={handleCreateUser}
+                    onClick={() => setCreateModalOpen(true)}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
                 >
                     <Plus size={16} />
@@ -184,33 +202,20 @@ export default function UsersPage() {
                 </button>
             </div>
 
-            {/* STATS */}
+            {pageError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {pageError}
+                </div>
+            )}
+
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard
-                    label="Total Users"
-                    value={stats.total}
-                    icon={<Users size={18} />}
-                />
-                <StatCard
-                    label="Active Users"
-                    value={stats.active}
-                    icon={<BadgeCheck size={18} />}
-                />
-                <StatCard
-                    label="Inactive Users"
-                    value={stats.inactive}
-                    icon={<UserCog size={18} />}
-                />
-                <StatCard
-                    label="Admins"
-                    value={stats.admins}
-                    icon={<ShieldCheck size={18} />}
-                />
+                <StatCard label="Total Users" value={stats.total} icon={<Users size={18} />} />
+                <StatCard label="Active Users" value={stats.active} icon={<BadgeCheck size={18} />} />
+                <StatCard label="Inactive Users" value={stats.inactive} icon={<UserCog size={18} />} />
+                <StatCard label="Admins" value={stats.admins} icon={<ShieldCheck size={18} />} />
             </div>
 
-            {/* TOOLBAR + TABLE */}
             <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
-                {/* Toolbar */}
                 <div className="border-b border-border px-4 py-4 md:px-5">
                     <div className="flex flex-col gap-4">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -219,7 +224,7 @@ export default function UsersPage() {
                                     Users List
                                 </h2>
                                 <p className="text-xs text-text-muted">
-                                    Search by user ID and filter by role or account status
+                                    Search by user ID, name, or phone and filter by role or status
                                 </p>
                             </div>
 
@@ -231,7 +236,7 @@ export default function UsersPage() {
                                 <input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search by user ID..."
+                                    placeholder="Search user ID, name, phone..."
                                     className="h-11 w-full rounded-2xl border border-border bg-surface pl-10 pr-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-primary focus:bg-white"
                                 />
                             </div>
@@ -239,7 +244,7 @@ export default function UsersPage() {
 
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div className="flex flex-wrap gap-2">
-                                {["all", "admin", "manager", "employee"].map((role) => {
+                                {["all", "admin", "manager", "employee", "labour"].map((role) => {
                                     const active = roleFilter === role;
                                     return (
                                         <button
@@ -277,15 +282,12 @@ export default function UsersPage() {
                     </div>
                 </div>
 
-                {/* Empty State */}
                 {filteredUsers.length === 0 ? (
                     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                         <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-text-muted">
                             <Users size={24} />
                         </div>
-                        <h3 className="text-base font-semibold text-text">
-                            No users found
-                        </h3>
+                        <h3 className="text-base font-semibold text-text">No users found</h3>
                         <p className="mt-1 max-w-md text-sm text-text-muted">
                             No users match your current search or applied filters.
                         </p>
@@ -302,11 +304,12 @@ export default function UsersPage() {
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-225 text-sm">
+                        <table className="w-full min-w-245 text-sm">
                             <thead className="bg-muted/50 text-[11px] uppercase tracking-wide text-text-muted">
                                 <tr>
                                     <th className="px-5 py-3 text-left font-semibold">User</th>
                                     <th className="px-4 py-3 text-left font-semibold">Role</th>
+                                    <th className="px-4 py-3 text-left font-semibold">Salary</th>
                                     <th className="px-4 py-3 text-left font-semibold">Status</th>
                                     <th className="px-4 py-3 text-left font-semibold">Created</th>
                                     <th className="px-5 py-3 text-right font-semibold">Actions</th>
@@ -315,10 +318,7 @@ export default function UsersPage() {
 
                             <tbody className="divide-y divide-border">
                                 {filteredUsers.map((user) => (
-                                    <tr
-                                        key={user._id}
-                                        className="transition hover:bg-surface/60"
-                                    >
+                                    <tr key={user._id} className="transition hover:bg-surface/60">
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-primary">
@@ -326,11 +326,13 @@ export default function UsersPage() {
                                                 </div>
                                                 <div>
                                                     <p className="font-semibold text-text">
-                                                        {user.userId}
+                                                        {user.name?.trim() || user.userId}
                                                     </p>
-                                                    <p className="text-xs text-text-muted">
-                                                        {user._id.slice(-6)}
-                                                    </p>
+                                                    <div className="flex flex-wrap items-center gap-x-2 text-xs text-text-muted">
+                                                        <span>@{user.userId}</span>
+                                                        {user.phone && <span>• {user.phone}</span>}
+                                                        <span>• {user._id.slice(-6)}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -343,6 +345,13 @@ export default function UsersPage() {
                                             >
                                                 {user.role}
                                             </span>
+                                        </td>
+
+                                        <td className="px-4 py-4 text-text-muted">
+                                            <div className="inline-flex items-center gap-1">
+                                                <IndianRupee size={14} />
+                                                <span>{formatSalary(user)}</span>
+                                            </div>
                                         </td>
 
                                         <td className="px-4 py-4">
@@ -387,6 +396,7 @@ export default function UsersPage() {
                     </div>
                 )}
             </div>
+
             <CreateUserModal
                 open={createModalOpen}
                 onClose={() => setCreateModalOpen(false)}
@@ -421,9 +431,7 @@ function StatCard({
                 <p className="text-xs uppercase tracking-wide text-text-muted">
                     {label}
                 </p>
-                <div className="rounded-xl bg-accent/10 p-2 text-primary">
-                    {icon}
-                </div>
+                <div className="rounded-xl bg-accent/10 p-2 text-primary">{icon}</div>
             </div>
             <p className="mt-4 text-2xl font-semibold tracking-tight text-text">
                 {value}

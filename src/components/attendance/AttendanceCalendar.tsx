@@ -1,141 +1,152 @@
 "use client";
 
-import DayCell from "./DayCell";
-import type { AttendanceRecord, Employee } from "@/types/attendance";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import AttendanceDayCell from "./AttendanceDayCell";
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-interface Props {
-    month?: Date;
-    records: AttendanceRecord[];
-    employee: Employee | null;
-    disabled: boolean;
-    readOnly?: boolean;
-    loading?: boolean;
-    onSaved: () => void;
-    onMonthChange: (date: Date) => void;
+interface AttendanceRecord {
+    date: string;
+    status: "present" | "absent" | "half-day";
+    advance: number;
 }
 
+const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 export default function AttendanceCalendar({
-    month = new Date(),
-    records = [],
-    employee,
-    disabled,
-    readOnly,
-    loading,
-    onSaved,
+    month,
+    records,
+    loading = false,
+    selectedDate,
     onMonthChange,
-}: Props) {
+    onSelectDate,
+}: {
+    month: Date;
+    records: AttendanceRecord[];
+    loading?: boolean;
+    selectedDate?: Date | null;
+    onMonthChange: (d: Date) => void;
+    onSelectDate: (date: Date, record: AttendanceRecord | null) => void;
+}) {
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
-    const firstDayIndex = new Date(year, monthIndex, 1).getDay();
+
+    const today = new Date();
+    const firstDay = new Date(year, monthIndex, 1).getDay();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+    const cells = Array.from({ length: totalCells });
 
-    const prevMonth = () => onMonthChange(new Date(year, monthIndex - 1, 1));
-    const nextMonth = () => onMonthChange(new Date(year, monthIndex + 1, 1));
+    const findRecord = (date: Date) =>
+        records.find((r) => new Date(r.date).toDateString() === date.toDateString()) || null;
 
-    const cells = [
-        ...Array.from({ length: firstDayIndex }).map((_, i) => (
-            <div
-                key={`empty-${i}`}
-                className="hidden min-h-30 rounded-2xl border border-transparent md:block"
-            />
-        )),
-        ...Array.from({ length: daysInMonth }).map((_, i) => {
-            const date = new Date(year, monthIndex, i + 1);
-
-            const record = records.find(
-                (r) => new Date(r.date).toDateString() === date.toDateString()
-            );
-
-            return (
-                <DayCell
-                    key={i}
-                    date={date}
-                    record={record}
-                    employee={employee}
-                    disabled={disabled}
-                    readOnly={readOnly}
-                    onSaved={onSaved}
-                />
-            );
-        }),
-    ];
+    const isCurrentMonth =
+        today.getFullYear() === year && today.getMonth() === monthIndex;
 
     return (
-        <section className="overflow-hidden rounded-[28px] border border-border bg-surface shadow-sm">
-            <div className="border-b border-border px-5 py-4 md:px-6">
+        <div className="overflow-hidden rounded-[28px] border border-border bg-surface shadow-sm">
+            <div className="border-b border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.9)_0%,rgba(248,248,248,0.9)_100%)] px-5 py-4">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h3 className="text-lg font-semibold text-text">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
+                            Monthly view
+                        </p>
+                        <h2 className="mt-1 text-lg font-semibold text-text">
                             {month.toLocaleString("default", {
                                 month: "long",
                                 year: "numeric",
                             })}
-                        </h3>
+                        </h2>
                         <p className="mt-1 text-sm text-text-muted">
-                            {disabled
-                                ? "Choose an employee to start marking attendance"
-                                : "Click any day to mark attendance and record advance"}
+                            Select a date to mark attendance or add advance
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2 self-start md:self-auto">
+                    <div className="flex flex-wrap items-center gap-2">
                         <button
-                            onClick={prevMonth}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-text transition hover:bg-muted"
+                            onClick={() => onMonthChange(new Date(year, monthIndex - 1, 1))}
+                            className="rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium text-text transition hover:bg-muted"
                         >
-                            <ChevronLeft size={16} />
+                            ← Prev
                         </button>
 
                         <button
                             onClick={() => onMonthChange(new Date())}
-                            className="rounded-xl border border-border bg-white px-4 py-2 text-sm font-medium text-text transition hover:bg-muted"
+                            className="rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium text-text transition hover:bg-muted"
                         >
                             Today
                         </button>
 
                         <button
-                            onClick={nextMonth}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-text transition hover:bg-muted"
+                            onClick={() => onMonthChange(new Date(year, monthIndex + 1, 1))}
+                            className="rounded-xl border border-border bg-white px-3 py-2 text-sm font-medium text-text transition hover:bg-muted"
                         >
-                            <ChevronRight size={16} />
+                            Next →
                         </button>
                     </div>
                 </div>
+
+                {isCurrentMonth && (
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/15 bg-brand-primary/5 px-3 py-1.5 text-xs font-medium text-brand-primary">
+                        <span className="h-2 w-2 rounded-full bg-brand-primary" />
+                        Current month
+                    </div>
+                )}
             </div>
 
-            <div className="px-3 py-3 md:px-5 md:py-5">
-                <div className="mb-3 grid grid-cols-7 gap-2 md:gap-3">
-                    {WEEKDAYS.map((d) => (
+            <div className="p-4 md:p-5">
+                <div className="mb-4 grid grid-cols-7 gap-3">
+                    {WEEK_DAYS.map((day) => (
                         <div
-                            key={d}
-                            className="px-2 py-1 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted"
+                            key={day}
+                            className="px-1 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted"
                         >
-                            {d}
+                            {day}
                         </div>
                     ))}
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-7">
-                        {[...Array(14)].map((_, i) => (
+                    <div className="grid grid-cols-7 gap-3">
+                        {Array.from({ length: 35 }).map((_, i) => (
                             <div
                                 key={i}
-                                className="h-30 animate-pulse rounded-2xl border border-border bg-white"
+                                className="h-28 animate-pulse rounded-2xl border border-border/60 bg-muted/70"
                             />
                         ))}
                     </div>
                 ) : (
-                    <div
-                        className={`grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-7 ${disabled ? "opacity-95" : ""
-                            }`}
-                    >
-                        {cells}
+                    <div className="grid grid-cols-7 gap-3">
+                        {cells.map((_, index) => {
+                            if (index < firstDay || index >= firstDay + daysInMonth) {
+                                return (
+                                    <div
+                                        key={`empty-${index}`}
+                                        className="h-28 rounded-2xl border border-transparent bg-transparent"
+                                    />
+                                );
+                            }
+
+                            const dayNumber = index - firstDay + 1;
+                            const date = new Date(year, monthIndex, dayNumber);
+                            const record = findRecord(date);
+
+                            const isSelected =
+                                selectedDate?.toDateString() === date.toDateString();
+
+                            const isToday = today.toDateString() === date.toDateString();
+
+                            return (
+                                <AttendanceDayCell
+                                    key={date.toISOString()}
+                                    date={date}
+                                    record={record}
+                                    isToday={isToday}
+                                    isSelected={isSelected}
+                                    onClick={() => onSelectDate(date, record)}
+                                />
+                            );
+                        })}
                     </div>
                 )}
             </div>
-        </section>
+        </div>
     );
 }

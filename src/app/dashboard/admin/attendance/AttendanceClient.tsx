@@ -1,179 +1,347 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import AttendanceCalendar from "@/components/attendance/AttendanceCalendar";
-import EmployeeSelect from "@/components/attendance/EmployeeSelect";
-import AttendanceSummary from "@/components/attendance/AttendanceSummary";
-import type { Employee, AttendanceRecord } from "@/types/attendance";
-import { CalendarDays, Users } from "lucide-react";
+import AttendanceSidePanel from "@/components/attendance/AttendanceSidePanel";
+import AttendanceModal from "@/components/attendance/AttendanceModal";
+import SearchableEmployeeSelect from "@/components/ui/SearchableEmployeeSelect";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
 
-type RequestState = "idle" | "loading" | "success" | "error";
+type AttendanceStatus = "present" | "absent" | "half-day";
+
+export interface AttendanceRecord {
+    date: string;
+    status: AttendanceStatus;
+    advance: number;
+}
+
+interface Employee {
+    _id: string;
+    name: string;
+    userId?: string;
+}
+
+type PanelMode = "summary" | "day";
 
 export default function AttendanceClient() {
-    const [employees, setEmployees] = useState<Employee[]>([]);
-    const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-    const [fetchedRecords, setFetchedRecords] = useState<AttendanceRecord[]>([]);
+    const router = useRouter();
+
     const [month, setMonth] = useState(new Date());
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [employeeId, setEmployeeId] = useState("");
+    const [records, setRecords] = useState<AttendanceRecord[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const [employeesState, setEmployeesState] = useState<RequestState>("idle");
-    const [recordsState, setRecordsState] = useState<RequestState>("idle");
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+
+    const [panelMode, setPanelMode] = useState<PanelMode>("summary");
+    const [modalOpen, setModalOpen] = useState(false);
+
+    const normalizeDate = (value: Date | string) => {
+        const d = new Date(value);
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    };
+
+    const isSameDay = (a: Date | string, b: Date | string) =>
+        normalizeDate(a).getTime() === normalizeDate(b).getTime();
+
+    const monthRange = useMemo(() => {
+        const start = new Date(month.getFullYear(), month.getMonth(), 1);
+        const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+
+        return {
+            start,
+            end,
+            startISO: start.toISOString(),
+            endISO: end.toISOString(),
+        };
+    }, [month]);
 
     useEffect(() => {
-        let ignore = false;
-
-        async function fetchEmployees() {
-            setEmployeesState("loading");
+        async function loadEmployees() {
             try {
-                const res = await api.get<Employee[]>("/users");
-                if (ignore) return;
-
-                setEmployees(res.data);
-
-                if (res.data.length > 0) {
-                    setSelectedEmployee((prev) => prev ?? res.data[0]);
-                }
-
-                setEmployeesState("success");
+                const { data } = await api.get("/users?role=employee");
+                setEmployees(data || []);
+                if (data?.length && !employeeId) setEmployeeId(data[0]._id);
             } catch (error) {
-                if (ignore) return;
-                console.error("Failed to fetch employees", error);
-                setEmployeesState("error");
+                console.error("Failed to load employees", error);
             }
         }
 
-        fetchEmployees();
+        loadEmployees();
+    }, [employeeId]);
 
-        return () => {
-            ignore = true;
-        };
-    }, []);
+    const loadAttendance = useCallback(async () => {
+        if (!employeeId) return;
+
+        setLoading(true);
+
+        try {
+            const { data } = await api.get(
+                `/attendance?employeeId=${employeeId}&start=${monthRange.startISO}&end=${monthRange.endISO}`
+            );
+
+            const next = data || [];
+            setRecords(next);
+
+            if (selectedDate) {
+                const found = next.find((item: AttendanceRecord) =>
+                    isSameDay(item.date, selectedDate)
+                );
+                setSelectedRecord(found || null);
+            }
+        } catch (error) {
+            console.error("Failed to load attendance", error);
+            setRecords([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [employeeId, monthRange, selectedDate]);
 
     useEffect(() => {
-        if (!selectedEmployee) return;
+        loadAttendance();
+    }, [loadAttendance]);
 
-        let ignore = false;
+    const stats = useMemo(() => {
+        let present = 0;
+        let absent = 0;
+        let halfDay = 0;
+        let totalAdvance = 0;
 
-        async function fetchAttendance() {
-            const start = new Date(month.getFullYear(), month.getMonth(), 1);
-            const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+        for (const item of records) {
+            if (item.status === "present") present++;
+            else if (item.status === "absent") absent++;
+            else if (item.status === "half-day") halfDay++;
 
-            setRecordsState("loading");
-
-            try {
-                const res = await api.get<AttendanceRecord[]>("/attendance", {
-                    params: {
-                        employeeId: selectedEmployee?._id,
-                        start: start.toISOString(),
-                        end: end.toISOString(),
-                    },
-                });
-
-                if (ignore) return;
-
-                setFetchedRecords(res.data);
-                setRecordsState("success");
-            } catch (error) {
-                if (ignore) return;
-
-                console.error("Failed to fetch attendance", error);
-                setRecordsState("error");
-            }
+            totalAdvance += Number(item.advance || 0);
         }
 
-        fetchAttendance();
-
-        return () => {
-            ignore = true;
+        return {
+            present,
+            absent,
+            halfDay,
+            payableDays: present + halfDay * 0.5,
+            totalAdvance,
         };
-    }, [selectedEmployee, month]);
+    }, [records]);
 
-    const records = useMemo(
-        () => (selectedEmployee ? fetchedRecords : []),
-        [selectedEmployee, fetchedRecords]
-    );
+    const selectedDateLabel = selectedDate
+        ? selectedDate.toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "long",
+            year: "numeric",
+        })
+        : "";
 
-    const monthLabel = month.toLocaleDateString("en-IN", {
-        month: "long",
-        year: "numeric",
-    });
+    const selectedEmployee = employees.find((e) => e._id === employeeId);
+    const { user } = useAuth();
 
-    const loadingEmployees = employeesState === "loading";
-    const loadingRecords = recordsState === "loading";
+    const handleOpenEmployeePage = () => {
+        if (!selectedEmployee?._id) return;
+
+        const params = new URLSearchParams({
+            start: monthRange.startISO,
+            end: monthRange.endISO,
+            from: "attendance",
+        });
+
+        router.push(`/dashboard/${user?.role}/employee/${selectedEmployee._id}?${params.toString()}`);
+    };
 
     return (
         <div className="space-y-6">
-            <section className="overflow-hidden rounded-[28px] border border-border bg-surface shadow-sm">
-                <div className="border-b border-border bg-muted/40 px-5 py-5 md:px-6">
-                    <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-                        <div className="space-y-2">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text-muted">
-                                <CalendarDays size={14} />
-                                Attendance register
-                            </div>
+            <div className="rounded-[28px] border border-border bg-surface p-5 shadow-sm md:p-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <span className="inline-flex rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand-primary">
+                            Workforce Management
+                        </span>
 
-                            <div>
-                                <h1 className="text-2xl font-semibold tracking-tight text-text md:text-3xl">
-                                    Attendance & Advance
-                                </h1>
-                                <p className="mt-1 text-sm text-text-muted">
-                                    Mark daily attendance, track advances, and monitor monthly records.
-                                </p>
-                            </div>
-                        </div>
+                        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-text md:text-3xl">
+                            Attendance & Advance
+                        </h1>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <div className="rounded-2xl border border-border bg-white px-4 py-3">
-                                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-text-muted">
-                                    Current month
-                                </p>
-                                <p className="mt-1 text-sm font-semibold text-text">{monthLabel}</p>
-                            </div>
+                        <p className="mt-2 max-w-2xl text-sm text-text-muted">
+                            Track daily attendance, half-days, absences and employee advances in one monthly view.
+                        </p>
 
-                            <div className="rounded-2xl border border-border bg-white px-4 py-3">
-                                <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-text-muted">
-                                    Active employee
-                                </p>
-                                <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-text">
-                                    <Users size={14} className="text-text-muted" />
-                                    {selectedEmployee?.userId || "None selected"}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                        {selectedEmployee && (
+                            <div className="mt-4 flex flex-wrap items-center gap-3">
+                                <div className="inline-flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-white px-3 py-2 text-sm shadow-sm">
+                                    <span className="font-medium text-text">{selectedEmployee.name}</span>
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-text-muted">
+                                        {selectedEmployee.userId || selectedEmployee._id}
+                                    </span>
+                                </div>
 
-                <div className="space-y-5 px-5 py-5 md:px-6">
-                    <div className="grid gap-4 lg:grid-cols-[minmax(280px,360px)_1fr]">
-                        <EmployeeSelect
-                            employees={employees}
-                            value={selectedEmployee}
-                            onChange={setSelectedEmployee}
-                            loading={loadingEmployees}
-                        />
-
-                        {!selectedEmployee ? (
-                            <div className="flex min-h-22 items-center rounded-2xl border border-dashed border-border bg-muted/40 px-4 py-4 text-sm text-text-muted">
-                                Select an employee to enable attendance marking and advance tracking.
+                                <button
+                                    type="button"
+                                    onClick={handleOpenEmployeePage}
+                                    className="inline-flex items-center rounded-2xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-text transition hover:bg-muted"
+                                >
+                                    View detailed report
+                                </button>
                             </div>
-                        ) : (
-                            <AttendanceSummary records={records} loading={loadingRecords} />
                         )}
                     </div>
-                </div>
-            </section>
 
-            <AttendanceCalendar
-                month={month}
-                records={records}
-                employee={selectedEmployee}
-                disabled={!selectedEmployee}
-                loading={loadingRecords}
-                onMonthChange={setMonth}
-                onSaved={() => {
-                    setMonth((prev) => new Date(prev.getFullYear(), prev.getMonth(), 1));
-                }}
-            />
+                    <div className="flex flex-col gap-3 sm:items-end">
+                        <SearchableEmployeeSelect
+                            value={employeeId}
+                            options={employees}
+                            onChange={(value) => {
+                                setEmployeeId(value);
+                                setSelectedDate(null);
+                                setSelectedRecord(null);
+                                setPanelMode("summary");
+                            }}
+                        />
+
+                        <div className="flex flex-wrap gap-3">
+                            {selectedDate && (
+                                <>
+                                    <button
+                                        onClick={() => setModalOpen(true)}
+                                        className="rounded-2xl bg-brand-primary px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90"
+                                    >
+                                        Update day
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            setSelectedDate(null);
+                                            setSelectedRecord(null);
+                                            setPanelMode("summary");
+                                        }}
+                                        className="rounded-2xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-text transition hover:bg-muted"
+                                    >
+                                        Clear selection
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                    <StatCard label="Present" value={stats.present} tone="success" />
+                    <StatCard label="Absent" value={stats.absent} tone="danger" />
+                    <StatCard label="Half day" value={stats.halfDay} tone="warning" />
+                    <StatCard
+                        label="Total advance"
+                        value={`₹${stats.totalAdvance.toLocaleString("en-IN")}`}
+                        tone="default"
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_360px]">
+                <div className="min-w-0">
+                    <AttendanceCalendar
+                        month={month}
+                        records={records}
+                        loading={loading}
+                        selectedDate={selectedDate}
+                        onMonthChange={setMonth}
+                        onSelectDate={(date, record) => {
+                            setSelectedDate(date);
+                            setSelectedRecord(record);
+                            setPanelMode("day");
+                        }}
+                    />
+                </div>
+
+                <div className="min-w-0">
+                    <AttendanceSidePanel
+                        loading={loading}
+                        mode={panelMode}
+                        selectedDate={selectedDate}
+                        selectedDateLabel={selectedDateLabel}
+                        selectedRecord={selectedRecord}
+                        employeeName={selectedEmployee?.name || "--"}
+                        stats={stats}
+                        onOpenCreate={() => {
+                            if (selectedDate) setModalOpen(true);
+                        }}
+                        onBack={() => {
+                            setSelectedDate(null);
+                            setSelectedRecord(null);
+                            setPanelMode("summary");
+                        }}
+                    />
+                </div>
+            </div>
+
+            {modalOpen && selectedDate && employeeId && (
+                <AttendanceModal
+                    open={modalOpen}
+                    employeeId={employeeId}
+                    employeeName={selectedEmployee?.name || ""}
+                    date={selectedDate}
+                    record={selectedRecord}
+                    onClose={() => setModalOpen(false)}
+                    onSaved={async () => {
+                        await loadAttendance();
+                        setModalOpen(false);
+                    }}
+                />
+            )}
+        </div>
+    );
+}
+
+function StatCard({
+    label,
+    value,
+    tone = "default",
+}: {
+    label: string;
+    value: number | string;
+    tone?: "default" | "success" | "warning" | "danger";
+}) {
+    const styles = {
+        default: {
+            wrap: "border-border bg-white",
+            dot: "bg-brand-primary",
+            label: "text-text-muted",
+            value: "text-text",
+        },
+        success: {
+            wrap: "border-emerald-200 bg-emerald-50/80",
+            dot: "bg-emerald-500",
+            label: "text-emerald-700",
+            value: "text-emerald-800",
+        },
+        warning: {
+            wrap: "border-amber-200 bg-amber-50/80",
+            dot: "bg-amber-500",
+            label: "text-amber-700",
+            value: "text-amber-800",
+        },
+        danger: {
+            wrap: "border-red-200 bg-red-50/80",
+            dot: "bg-red-500",
+            label: "text-red-700",
+            value: "text-red-800",
+        },
+    };
+
+    const current = styles[tone];
+
+    return (
+        <div className={`rounded-2xl border px-4 py-4 shadow-sm ${current.wrap}`}>
+            <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${current.dot}`} />
+                <p className={`text-xs font-semibold uppercase tracking-[0.14em] ${current.label}`}>
+                    {label}
+                </p>
+            </div>
+            <p className={`mt-3 text-2xl font-semibold tabular-nums ${current.value}`}>
+                {value}
+            </p>
         </div>
     );
 }

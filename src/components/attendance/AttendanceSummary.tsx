@@ -1,22 +1,21 @@
-import type { AttendanceRecord } from "@/types/attendance";
-import { calculateAttendanceSummary } from "@/utils/attendanceSummary";
-import { CalendarCheck2, CalendarX2, Coins, Clock3 } from "lucide-react";
+import type { AttendanceRecord, EmployeeSummary } from "@/types/attendance";
+import { CalendarCheck2, CalendarX2, Coins, Clock3, Calculator } from "lucide-react";
 
 interface Props {
     records: AttendanceRecord[];
+    summary?: EmployeeSummary;
     loading?: boolean;
 }
 
 export default function AttendanceSummary({
     records,
+    summary,
     loading = false,
 }: Props) {
-    const summary = calculateAttendanceSummary(records);
-
     if (loading) {
         return (
-            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+                {[...Array(5)].map((_, i) => (
                     <div
                         key={i}
                         className="h-23 animate-pulse rounded-2xl border border-border bg-white"
@@ -26,35 +25,57 @@ export default function AttendanceSummary({
         );
     }
 
+    /* 🔥 fallback if summary not passed */
+    const safeSummary = summary || {
+        present: 0,
+        absent: 0,
+        halfDay: 0,
+        payableDays: 0,
+        totalAdvance: 0,
+    };
+
     return (
-        <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
             <Stat
                 label="Present"
-                value={summary.present}
+                value={safeSummary.present}
                 icon={<CalendarCheck2 size={16} />}
                 tone="green"
             />
+
             <Stat
                 label="Half-days"
-                value={summary.halfDay}
+                value={safeSummary.halfDay}
                 icon={<Clock3 size={16} />}
                 tone="yellow"
             />
+
             <Stat
                 label="Absent"
-                value={summary.absent}
+                value={safeSummary.absent}
                 icon={<CalendarX2 size={16} />}
                 tone="red"
             />
+
+            {/* 🔥 NEW IMPORTANT CARD */}
+            <Stat
+                label="Payable days"
+                value={safeSummary.payableDays}
+                icon={<Calculator size={16} />}
+                tone="blue"
+            />
+
             <Stat
                 label="Advance taken"
-                value={`₹ ${summary.advanceTotal}`}
+                value={`₹ ${safeSummary.totalAdvance}`}
                 icon={<Coins size={16} />}
                 tone="amber"
             />
         </div>
     );
 }
+
+/* ================= STAT CARD ================= */
 
 function Stat({
     label,
@@ -65,7 +86,7 @@ function Stat({
     label: string;
     value: number | string;
     icon: React.ReactNode;
-    tone: "green" | "yellow" | "red" | "amber";
+    tone: "green" | "yellow" | "red" | "amber" | "blue";
 }) {
     const styles = {
         green: {
@@ -84,6 +105,10 @@ function Stat({
             icon: "bg-amber-100 text-amber-700",
             value: "text-amber-700",
         },
+        blue: {
+            icon: "bg-blue-100 text-blue-700",
+            value: "text-blue-700",
+        },
     }[tone];
 
     return (
@@ -92,7 +117,9 @@ function Stat({
                 <p className="text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
                     {label}
                 </p>
-                <div className={`rounded-xl p-2 ${styles.icon}`}>{icon}</div>
+                <div className={`rounded-xl p-2 ${styles.icon}`}>
+                    {icon}
+                </div>
             </div>
 
             <p className={`mt-4 text-2xl font-semibold tracking-tight ${styles.value}`}>

@@ -1,9 +1,9 @@
-export const metadata = {
-  title: "KPI Management | Attendance",
-};
-
 import AttendanceClient from "./AttendanceClient";
 
-export default function Page() {
+export const metadata = {
+  title: "TKPI Management | Attendance & Advance",
+};
+
+export default function AttendancePage() {
   return <AttendanceClient />;
 }

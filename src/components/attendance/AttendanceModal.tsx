@@ -1,183 +1,328 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import type {
-    AttendanceRecord,
-    AttendanceStatus,
-    Employee,
-} from "@/types/attendance";
-import { CalendarDays, Coins, X } from "lucide-react";
+import { CheckCircle2, Clock3, X, XCircle } from "lucide-react";
 
-interface Props {
-    date: Date;
-    employee: Employee;
-    record?: AttendanceRecord;
-    onClose: () => void;
-    onSaved: () => void;
-}
-
-const STATUS_OPTIONS: {
-    label: string;
-    value: AttendanceStatus;
-    active: string;
-}[] = [
-        {
-            label: "Present",
-            value: "present",
-            active: "border-green-300 bg-green-100 text-green-700",
-        },
-        {
-            label: "Half-day",
-            value: "half-day",
-            active: "border-yellow-300 bg-yellow-100 text-yellow-700",
-        },
-        {
-            label: "Absent",
-            value: "absent",
-            active: "border-red-300 bg-red-100 text-red-700",
-        },
-    ];
+type AttendanceStatus = "present" | "absent" | "half-day";
 
 export default function AttendanceModal({
+    open,
+    employeeId,
+    employeeName,
     date,
-    employee,
     record,
     onClose,
     onSaved,
-}: Props) {
-    const [status, setStatus] = useState<AttendanceStatus>(
-        record?.status ?? "present"
-    );
-    const [advance, setAdvance] = useState<number>(record?.advance ?? 0);
+}: {
+    open: boolean;
+    employeeId: string;
+    employeeName: string;
+    date: Date;
+    record: {
+        status: AttendanceStatus;
+        advance: number;
+    } | null;
+    onClose: () => void;
+    onSaved: () => void | Promise<void>;
+}) {
+    const [status, setStatus] = useState<AttendanceStatus>("present");
+    const [advance, setAdvance] = useState("");
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setStatus(record?.status || "present");
+        setAdvance(record?.advance ? String(record.advance) : "");
+    }, [record, open]);
+
+    useEffect(() => {
+        if (!open) return;
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape" && !saving) {
+                onClose();
+            }
+        };
+
+        document.addEventListener("keydown", onKeyDown);
+        return () => document.removeEventListener("keydown", onKeyDown);
+    }, [open, saving, onClose]);
+
+    if (!open) return null;
+
+    const formattedDate = date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    });
 
     const save = async () => {
         try {
             setSaving(true);
-
             await api.post("/attendance", {
-                employeeId: employee._id,
-                date,
+                employeeId,
+                date: date.toISOString(),
                 status,
-                advance: status === "absent" ? 0 : advance,
+                advance: Number(advance || 0),
             });
-
-            onSaved();
-            onClose();
+            await onSaved();
         } catch (error) {
             console.error("Failed to save attendance:", error);
+            alert("Failed to save attendance");
         } finally {
             setSaving(false);
         }
     };
 
+    const statusOptions: {
+        value: AttendanceStatus;
+        label: string;
+        description: string;
+        icon: React.ReactNode;
+        activeClass: string;
+    }[] = [
+            {
+                value: "present",
+                label: "Present",
+                description: "Full working day",
+                icon: <CheckCircle2 className="h-4 w-4" />,
+                activeClass: "border-emerald-300 bg-emerald-50 text-emerald-700",
+            },
+            {
+                value: "absent",
+                label: "Absent",
+                description: "No attendance",
+                icon: <XCircle className="h-4 w-4" />,
+                activeClass: "border-red-300 bg-red-50 text-red-700",
+            },
+            {
+                value: "half-day",
+                label: "Half day",
+                description: "Partial attendance",
+                icon: <Clock3 className="h-4 w-4" />,
+                activeClass: "border-amber-300 bg-amber-50 text-amber-700",
+            },
+        ];
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]">
-            <div className="w-full max-w-md overflow-hidden rounded-[28px] border border-border bg-surface shadow-2xl">
-                <div className="border-b border-border bg-muted/40 px-6 py-5">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+            onClick={() => {
+                if (!saving) onClose();
+            }}
+        >
+            <div
+                className="w-full max-w-2xl overflow-hidden rounded-4xl border border-border bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="border-b border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,248,248,0.94)_100%)] px-6 py-5">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text-muted">
-                                <CalendarDays size={13} />
-                                Mark attendance
-                            </div>
-
-                            <h3 className="mt-3 text-xl font-semibold text-text">
-                                {employee.userId}
-                            </h3>
-
-                            <p className="mt-1 text-sm text-text-muted">
-                                {date.toLocaleDateString(undefined, {
-                                    weekday: "long",
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                })}
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
+                                Attendance entry
                             </p>
+                            <h3 className="mt-2 text-xl font-semibold text-text">
+                                {record ? "Update attendance" : "Mark attendance"}
+                            </h3>
+                            <p className="mt-1 text-sm text-text-muted">
+                                Review the day status and record any advance amount.
+                            </p>
+
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                                <span className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text">
+                                    {employeeName}
+                                </span>
+                                <span className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text-muted">
+                                    {formattedDate}
+                                </span>
+                            </div>
                         </div>
 
                         <button
                             onClick={onClose}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-white text-text-muted transition hover:bg-muted hover:text-text"
+                            disabled={saving}
+                            className="rounded-xl border border-border bg-white p-2 text-text transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <X size={16} />
                         </button>
                     </div>
                 </div>
 
-                <div className="space-y-6 px-6 py-6">
-                    <div className="space-y-3">
-                        <label className="text-sm font-semibold text-text">Attendance status</label>
+                <div className="grid gap-6 p-6">
+                    <div className="space-y-6">
+                        <div>
+                            <label className="mb-3 block text-sm font-semibold text-text">
+                                Attendance status
+                            </label>
 
-                        <div className="grid grid-cols-3 gap-2">
-                            {STATUS_OPTIONS.map((opt) => {
-                                const active = status === opt.value;
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                {statusOptions.map((option) => {
+                                    const active = status === option.value;
 
-                                return (
-                                    <button
-                                        key={opt.value}
-                                        type="button"
-                                        onClick={() => setStatus(opt.value)}
-                                        className={`rounded-2xl border px-3 py-3 text-sm font-medium transition ${active
-                                                ? opt.active
-                                                : "border-border bg-white text-text-muted hover:bg-muted"
-                                            }`}
-                                    >
-                                        {opt.label}
-                                    </button>
-                                );
-                            })}
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            onClick={() => setStatus(option.value)}
+                                            className={`rounded-2xl border px-4 py-4 text-left transition ${active
+                                                ? option.activeClass + " shadow-sm"
+                                                : "border-border bg-white text-text hover:bg-muted"
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {option.icon}
+                                                <span className="text-sm font-semibold">{option.label}</span>
+                                            </div>
+                                            <p className="mt-2 text-xs opacity-80">{option.description}</p>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
 
-                    {status !== "absent" && (
-                        <div className="space-y-3">
-                            <label className="flex items-center gap-2 text-sm font-semibold text-text">
-                                <Coins size={15} className="text-amber-600" />
-                                Advance taken
+                        <div>
+                            <label className="mb-3 block text-sm font-semibold text-text">
+                                Advance amount
                             </label>
 
                             <div className="relative">
                                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">
                                     ₹
                                 </span>
-
                                 <input
                                     type="number"
-                                    min={0}
-                                    placeholder="0"
+                                    min="0"
                                     value={advance}
-                                    onChange={(e) => setAdvance(Number(e.target.value) || 0)}
-                                    className="h-12 w-full rounded-2xl border border-border bg-white pl-8 pr-4 text-sm font-medium text-text outline-none transition focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                    onChange={(e) => setAdvance(e.target.value)}
+                                    placeholder="0"
+                                    className="h-13 w-full rounded-2xl border border-border bg-white pl-9 pr-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
                                 />
                             </div>
 
-                            <p className="text-xs text-text-muted">
-                                Leave as 0 if no advance was given on this day.
+                            <p className="mt-2 text-xs text-text-muted">
+                                Leave blank or keep 0 if no advance was given for this day.
                             </p>
                         </div>
-                    )}
 
-                    <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
-                        <button
-                            onClick={onClose}
-                            disabled={saving}
-                            className="rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-text transition hover:bg-muted disabled:opacity-50"
-                        >
-                            Cancel
-                        </button>
+                        <div className="space-y-4">
+                            <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-text">Quick summary</h4>
+                                        <p className="mt-1 text-xs text-text-muted">
+                                            Review the selected attendance entry before saving.
+                                        </p>
+                                    </div>
 
-                        <button
-                            onClick={save}
-                            disabled={saving}
-                            className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
-                        >
-                            {saving ? "Saving..." : "Save attendance"}
-                        </button>
+                                    <span className="rounded-full bg-brand-primary/8 px-2.5 py-1 text-[11px] font-semibold text-brand-primary">
+                                        Preview
+                                    </span>
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <SummaryRow label="Employee" value={employeeName} />
+                                    <SummaryRow label="Date" value={formattedDate} />
+                                    <SummaryRow
+                                        label="Status"
+                                        value={
+                                            status === "half-day"
+                                                ? "Half day"
+                                                : status.charAt(0).toUpperCase() + status.slice(1)
+                                        }
+                                        tone={
+                                            status === "present"
+                                                ? "success"
+                                                : status === "absent"
+                                                    ? "danger"
+                                                    : "warning"
+                                        }
+                                    />
+                                    <SummaryRow
+                                        label="Advance"
+                                        value={`₹${Number(advance || 0).toLocaleString("en-IN")}`}
+                                        tone="default"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="rounded-3xl border border-dashed border-border bg-muted/35 p-4">
+                                <p className="text-sm font-semibold text-text">Entry note</p>
+                                <p className="mt-1 text-xs leading-5 text-text-muted">
+                                    Saving will create or update the attendance record for the selected employee and date.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <div className="flex flex-col-reverse gap-3 border-t border-border px-6 py-5 sm:flex-row sm:items-center sm:justify-end">
+                    <button
+                        onClick={onClose}
+                        disabled={saving}
+                        className="rounded-2xl border border-border bg-white px-4 py-2.5 text-sm font-medium text-text transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        onClick={save}
+                        disabled={saving}
+                        className="rounded-2xl bg-brand-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {saving ? "Saving..." : record ? "Update attendance" : "Save attendance"}
+                    </button>
+                </div>
             </div>
+        </div>
+    );
+}
+
+function SummaryRow({
+    label,
+    value,
+    tone = "default",
+}: {
+    label: string;
+    value: string;
+    tone?: "default" | "success" | "warning" | "danger";
+}) {
+    const styles = {
+        default: {
+            wrap: "border-border bg-surface-2",
+            value: "text-text",
+            accent: "bg-brand-primary/10",
+        },
+        success: {
+            wrap: "border-emerald-200 bg-emerald-50/70",
+            value: "text-emerald-800",
+            accent: "bg-emerald-500",
+        },
+        warning: {
+            wrap: "border-amber-200 bg-amber-50/70",
+            value: "text-amber-800",
+            accent: "bg-amber-500",
+        },
+        danger: {
+            wrap: "border-red-200 bg-red-50/70",
+            value: "text-red-800",
+            accent: "bg-red-500",
+        },
+    };
+
+    const current = styles[tone];
+
+    return (
+        <div className={`rounded-2xl border px-4 py-3 ${current.wrap}`}>
+            <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${current.accent}`} />
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+                    {label}
+                </span>
+            </div>
+
+            <p className={`mt-2 text-sm font-semibold leading-6 ${current.value}`}>
+                {value}
+            </p>
         </div>
     );
 }
