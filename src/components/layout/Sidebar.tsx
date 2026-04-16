@@ -29,12 +29,12 @@ export default function Sidebar() {
   const isSectionActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  // const operationsNav: NavItem[] = [
-  //   { label: "Sales Quotations", href: `${roleBase}/sales` },
-  //   { label: "Sales Orders", href: `${roleBase}/sales-orders` },
-  //   { label: "Purchase Enquiry", href: `${roleBase}/purchase` },
-  //   { label: "Purchase Order", href: `${roleBase}/purchase-orders` },
-  // ];
+  const operationsNav: NavItem[] = [
+    { label: "Sales Quotations", href: `${roleBase}/sales` },
+    { label: "Sales Orders", href: `${roleBase}/sales-orders` },
+    { label: "Purchase Enquiry", href: `${roleBase}/purchase` },
+    { label: "Purchase Order", href: `${roleBase}/purchase-orders` },
+  ];
 
   const managementNav: NavItem[] = [
     { label: "Products", href: `${roleBase}/products` },
@@ -87,7 +87,7 @@ export default function Sidebar() {
             active={isExactActive(roleBase)}
           />
 
-          {/* <SidebarSection title="Operations">
+          <SidebarSection title="Operations - (Testing Phase)">
             {operationsNav.map((item) => (
               <NavLink
                 key={item.href}
@@ -95,7 +95,7 @@ export default function Sidebar() {
                 active={isSectionActive(item.href)}
               />
             ))}
-          </SidebarSection> */}
+          </SidebarSection>
 
           <SidebarSection title="Management">
             {managementNav.map((item) => (

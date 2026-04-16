@@ -116,10 +116,8 @@ export default function CreateUserModal({
     const validate = () => {
         const nextErrors: FormErrors = {};
 
-        if (!form.userId.trim()) {
-            nextErrors.userId = "User ID is required";
-        } else if (form.userId.trim().length < 3) {
-            nextErrors.userId = "User ID must be at least 3 characters";
+        if (!form.name.trim()) {
+            nextErrors.name = "Full Name is required";
         }
 
         if (!form.password) {
@@ -228,7 +226,6 @@ export default function CreateUserModal({
             setSubmitting(true);
 
             await api.post("/users", {
-                userId: form.userId.trim(),
                 password: form.password,
                 role: form.role,
                 name: form.name.trim() || undefined,
@@ -321,41 +318,28 @@ export default function CreateUserModal({
                             </div>
                         )}
 
-                        <div className="gap-4">
-                            <div className="space-y-1.5">
+                        <div className="grid gap-4 sm:grid-cols-2 pb-2">
+                            <div className="space-y-1.5 flex flex-col">
                                 <label className="text-sm font-medium text-text">
-                                    User ID <span className="text-red-500">*</span>
+                                    Full Name <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     ref={firstInputRef}
                                     type="text"
-                                    value={form.userId}
-                                    onChange={(e) => handleChange("userId", e.target.value)}
-                                    placeholder="Enter user ID"
-                                    className={`h-11 w-full rounded-2xl border bg-surface px-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:bg-white ${errors.userId
+                                    value={form.name}
+                                    onChange={(e) => handleChange("name", e.target.value)}
+                                    placeholder="Enter full name"
+                                    className={`h-11 w-full rounded-2xl border bg-surface px-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:bg-white ${errors.name
                                         ? "border-red-300 focus:border-red-500"
                                         : "border-border focus:border-primary"
                                         }`}
                                 />
-                                {errors.userId && (
-                                    <p className="text-xs text-red-600">{errors.userId}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2 pb-2">
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-text">Full Name</label>
-                                <input
-                                    type="text"
-                                    value={form.name}
-                                    onChange={(e) => handleChange("name", e.target.value)}
-                                    placeholder="Enter full name"
-                                    className="h-11 w-full rounded-2xl border border-border bg-surface px-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-primary focus:bg-white"
-                                />
                                 {errors.name && (
                                     <p className="text-xs text-red-600">{errors.name}</p>
                                 )}
+                                <p className="text-xs text-text-muted mt-1">
+                                    User ID will be auto-generated based on name.
+                                </p>
                             </div>
 
                             <div className="space-y-1.5">
