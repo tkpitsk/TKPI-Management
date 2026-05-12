@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import {
     BadgeCheck,
+    Ban,
     Briefcase,
     HardHat,
     IndianRupee,
@@ -22,10 +23,11 @@ interface User {
     userId: string;
     name?: string;
     phone?: string;
-    role: "admin" | "manager" | "employee" | "labour";
+    role: "admin" | "manager" | "employee" | "worker";
     salaryType?: "monthly" | "weekly" | "daily";
     salaryAmount?: number;
     isActive: boolean;
+    image?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -41,6 +43,7 @@ export default function UsersPage() {
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [modalMode, setModalMode] = useState<"edit" | "delete">("edit");
 
     const fetchUsers = async () => {
         try {
@@ -100,7 +103,7 @@ export default function UsersPage() {
                 return "border-blue-200 bg-blue-50 text-blue-700";
             case "employee":
                 return "border-slate-200 bg-slate-50 text-slate-700";
-            case "labour":
+            case "worker":
                 return "border-amber-200 bg-amber-50 text-amber-700";
             default:
                 return "border-slate-200 bg-slate-50 text-slate-700";
@@ -121,7 +124,7 @@ export default function UsersPage() {
 
     const formatSalary = (user: User) => {
         if (!user.salaryAmount || user.salaryAmount <= 0) return "—";
-        const amount = new Intl.NumberFormat("en-IN").format(user.salaryAmount);
+        const amount = new Intl.NumberFormat("en-IN").format(Math.round(user.salaryAmount));
         return `₹${amount}${user.salaryType ? ` / ${user.salaryType}` : ""}`;
     };
 
@@ -146,6 +149,13 @@ export default function UsersPage() {
 
     const handleEditUser = (user: User) => {
         setSelectedUser(user);
+        setModalMode("edit");
+        setEditModalOpen(true);
+    };
+
+    const handleDeleteUser = (user: User) => {
+        setSelectedUser(user);
+        setModalMode("delete");
         setEditModalOpen(true);
     };
 
@@ -244,7 +254,7 @@ export default function UsersPage() {
 
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div className="flex flex-wrap gap-2">
-                                {["all", "admin", "manager", "employee", "labour"].map((role) => {
+                                {["all", "admin", "manager", "employee", "worker"].map((role) => {
                                     const active = roleFilter === role;
                                     return (
                                         <button
@@ -321,9 +331,17 @@ export default function UsersPage() {
                                     <tr key={user._id} className="transition hover:bg-surface/60">
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-primary">
-                                                    <Users size={16} />
-                                                </div>
+                                                {user.image ? (
+                                                    <img
+                                                        src={user.image}
+                                                        alt={user.name || user.userId}
+                                                        className="h-10 w-10 rounded-xl object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-primary">
+                                                        <Users size={16} />
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <p className="font-semibold text-text">
                                                         {user.name?.trim() || user.userId}
@@ -381,12 +399,20 @@ export default function UsersPage() {
                                                 {user.isActive && (
                                                     <button
                                                         onClick={() => handleDeactivate(user._id)}
-                                                        className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                                                        className="inline-flex items-center gap-1 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-medium text-orange-700 transition hover:bg-orange-100"
                                                     >
-                                                        <Trash2 size={14} />
+                                                        <Ban size={14} />
                                                         Deactivate
                                                     </button>
                                                 )}
+
+                                                <button
+                                                    onClick={() => handleDeleteUser(user)}
+                                                    className="inline-flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    Delete
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -406,6 +432,7 @@ export default function UsersPage() {
             <EditUserModal
                 open={editModalOpen}
                 user={selectedUser}
+                initialMode={modalMode}
                 onClose={() => {
                     setEditModalOpen(false);
                     setSelectedUser(null);

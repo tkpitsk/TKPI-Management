@@ -10,6 +10,7 @@ export default function AttendanceModal({
     open,
     employeeId,
     employeeName,
+    employeeImage,
     date,
     record,
     onClose,
@@ -18,21 +19,25 @@ export default function AttendanceModal({
     open: boolean;
     employeeId: string;
     employeeName: string;
+    employeeImage?: string;
     date: Date;
     record: {
         status: AttendanceStatus;
         advance: number;
+        reason?: string;
     } | null;
     onClose: () => void;
     onSaved: () => void | Promise<void>;
 }) {
     const [status, setStatus] = useState<AttendanceStatus>("present");
     const [advance, setAdvance] = useState("");
+    const [reason, setReason] = useState("");
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         setStatus(record?.status || "present");
         setAdvance(record?.advance ? String(record.advance) : "");
+        setReason(record?.reason || "");
     }, [record, open]);
 
     useEffect(() => {
@@ -64,6 +69,7 @@ export default function AttendanceModal({
                 date: date.toISOString(),
                 status,
                 advance: Number(advance || 0),
+                reason,
             });
             await onSaved();
         } catch (error) {
@@ -112,7 +118,7 @@ export default function AttendanceModal({
             }}
         >
             <div
-                className="w-full max-w-2xl overflow-hidden rounded-4xl border border-border bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
+                className="w-full max-w-3xl h-[98%] flex flex-col overflow-hidden rounded-4xl border border-border bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="border-b border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,248,248,0.94)_100%)] px-6 py-5">
@@ -128,14 +134,23 @@ export default function AttendanceModal({
                                 Review the day status and record any advance amount.
                             </p>
 
-                            <div className="mt-4 flex flex-wrap items-center gap-2">
-                                <span className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text">
-                                    {employeeName}
-                                </span>
-                                <span className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-text-muted">
-                                    {formattedDate}
-                                </span>
-                            </div>
+                                <div className="mt-4 flex items-center gap-3">
+                                    {employeeImage ? (
+                                        <img src={employeeImage} alt={employeeName} className="h-10 w-10 rounded-xl object-cover border border-border" />
+                                    ) : (
+                                        <div className="h-10 w-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/20">
+                                            {employeeName.charAt(0)}
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-semibold text-text leading-none">
+                                            {employeeName}
+                                        </span>
+                                        <span className="mt-1 text-[11px] text-text-muted leading-none">
+                                            {formattedDate}
+                                        </span>
+                                    </div>
+                                </div>
                         </div>
 
                         <button
@@ -148,7 +163,8 @@ export default function AttendanceModal({
                     </div>
                 </div>
 
-                <div className="grid gap-6 p-6">
+                <div className="flex-1 overflow-y-auto p-6">
+                    <div className="grid gap-6">
                     <div className="space-y-6">
                         <div>
                             <label className="mb-3 block text-sm font-semibold text-text">
@@ -204,6 +220,22 @@ export default function AttendanceModal({
                             </p>
                         </div>
 
+                        {(status === "absent" || status === "half-day") && (
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                <label className="mb-3 block text-sm font-semibold text-text">
+                                    Reason for {status === "absent" ? "Absence" : "Half-day"}
+                                    <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted opacity-60">(Optional)</span>
+                                </label>
+                                <textarea
+                                    value={reason}
+                                    onChange={(e) => setReason(e.target.value)}
+                                    placeholder={`e.g. Health issues, Personal work...`}
+                                    className="w-full rounded-2xl border border-border bg-white p-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 resize-none"
+                                    rows={3}
+                                />
+                            </div>
+                        )}
+
                         <div className="space-y-4">
                             <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
                                 <div className="flex items-start justify-between gap-3">
@@ -239,7 +271,7 @@ export default function AttendanceModal({
                                     />
                                     <SummaryRow
                                         label="Advance"
-                                        value={`₹${Number(advance || 0).toLocaleString("en-IN")}`}
+                                        value={`₹${Math.round(Number(advance || 0)).toLocaleString("en-IN")}`}
                                         tone="default"
                                     />
                                 </div>
@@ -252,6 +284,7 @@ export default function AttendanceModal({
                                 </p>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
 

@@ -7,6 +7,7 @@ import {
     EyeOff,
     RefreshCw,
     ShieldPlus,
+    Upload,
     X,
 } from "lucide-react";
 import api from "@/lib/api";
@@ -17,7 +18,7 @@ interface CreateUserModalProps {
     onCreated?: () => void;
 }
 
-type Role = "admin" | "manager" | "employee" | "labour" | "";
+type Role = "admin" | "manager" | "employee" | "worker" | "";
 type SalaryType = "monthly" | "weekly" | "daily" | "";
 
 type FormData = {
@@ -28,6 +29,7 @@ type FormData = {
     phone: string;
     salaryType: SalaryType;
     salaryAmount: string;
+    image: File | null;
 };
 
 type FormErrors = {
@@ -58,6 +60,7 @@ export default function CreateUserModal({
         phone: "",
         salaryType: "",
         salaryAmount: "",
+        image: null,
     });
 
     const [errors, setErrors] = useState<FormErrors>({});
@@ -66,11 +69,11 @@ export default function CreateUserModal({
     const [copied, setCopied] = useState(false);
 
     const isSalaryRequired = useMemo(
-        () => ["manager", "employee", "labour"].includes(form.role),
+        () => ["manager", "employee", "worker"].includes(form.role),
         [form.role]
     );
 
-    const showSalaryType = form.role === "labour";
+    const showSalaryType = form.role === "worker";
 
     useEffect(() => {
         if (!open) {
@@ -82,6 +85,7 @@ export default function CreateUserModal({
                 phone: "",
                 salaryType: "",
                 salaryAmount: "",
+                image: null,
             });
             setErrors({});
             setSubmitting(false);
@@ -160,7 +164,7 @@ export default function CreateUserModal({
                     next.salaryAmount = "";
                 } else if (value === "manager" || value === "employee") {
                     next.salaryType = "monthly";
-                } else if (value === "labour" && !next.salaryType) {
+                } else if (value === "worker" && !next.salaryType) {
                     next.salaryType = "daily";
                 }
             }
@@ -178,6 +182,18 @@ export default function CreateUserModal({
 
         if (field === "password") {
             setCopied(false);
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                setErrors(prev => ({ ...prev, general: "Image size must be less than 5MB" }));
+                return;
+            }
+            setForm(prev => ({ ...prev, image: file }));
+            setErrors(prev => ({ ...prev, general: undefined }));
         }
     };
 
@@ -225,21 +241,32 @@ export default function CreateUserModal({
         try {
             setSubmitting(true);
 
-            await api.post("/users", {
-                password: form.password,
-                role: form.role,
-                name: form.name.trim() || undefined,
-                phone: form.phone.trim() || undefined,
-                salaryType:
-                    form.role === "labour"
-                        ? form.salaryType
-                        : form.role === "manager" || form.role === "employee"
-                            ? "monthly"
-                            : undefined,
-                salaryAmount:
-                    form.salaryAmount.trim() === ""
-                        ? undefined
-                        : Number(form.salaryAmount),
+            const formData = new FormData();
+            formData.append("password", form.password);
+            formData.append("role", form.role);
+            if (form.name.trim()) formData.append("name", form.name.trim());
+            if (form.phone.trim()) formData.append("phone", form.phone.trim());
+            
+            const salaryType = form.role === "worker"
+                ? form.salaryType
+                : form.role === "manager" || form.role === "employee"
+                    ? "monthly"
+                    : undefined;
+            
+            if (salaryType) formData.append("salaryType", salaryType);
+            
+            if (form.salaryAmount.trim() !== "") {
+                formData.append("salaryAmount", form.salaryAmount);
+            }
+
+            if (form.image) {
+                formData.append("image", form.image);
+            }
+
+            await api.post("/users", formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
             });
 
             onCreated?.();
@@ -317,6 +344,52 @@ export default function CreateUserModal({
                                 {errors.general}
                             </div>
                         )}
+
+                        <div className="flex flex-col items-center gap-4 border-b border-border pb-6 sm:flex-row">
+                            <div className="relative group">
+                                <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-border bg-surface transition group-hover:border-accent">
+                                    {form.image ? (
+                                        <img
+                                            src={URL.createObjectURL(form.image)}
+                                            alt="Preview"
+                                            className="h-full w-full object-cover"
+                                        />
+                                    ) : (
+                                        <Upload className="text-text-muted group-hover:text-accent" size={24} />
+                                    )}
+                                </div>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="absolute inset-0 cursor-pointer opacity-0"
+                                    title="Choose profile image"
+                                />
+                                {form.image && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setForm(prev => ({ ...prev, image: null }))}
+                                        className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex-1 text-center sm:text-left">
+                                <h3 className="text-sm font-semibold text-text">Profile Picture</h3>
+                                <p className="text-xs text-text-muted mt-1">
+                                    Recommended: Square image, max 5MB. This will be visible across the management panel.
+                                </p>
+                                <button
+                                    type="button"
+                                    className="mt-2 text-xs font-bold text-accent hover:underline"
+                                    onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
+                                >
+                                    Choose Photo
+                                </button>
+                            </div>
+                        </div>
 
                         <div className="grid gap-4 sm:grid-cols-2 pb-2">
                             <div className="space-y-1.5 flex flex-col">
@@ -428,7 +501,7 @@ export default function CreateUserModal({
                                 Role <span className="text-red-500">*</span>
                             </label>
                             <div className="flex gap-2">
-                                {["admin", "manager", "employee", "labour"].map((role) => {
+                                {["admin", "manager", "employee", "worker"].map((role) => {
                                     const active = form.role === role;
 
                                     return (
@@ -453,7 +526,7 @@ export default function CreateUserModal({
 
                         {(form.role === "manager" ||
                             form.role === "employee" ||
-                            form.role === "labour") && (
+                            form.role === "worker") && (
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     {showSalaryType && (
                                         <div className="space-y-1.5">

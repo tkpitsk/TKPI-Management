@@ -13,6 +13,7 @@ export default function AttendanceSidePanel({
     selectedDateLabel,
     selectedRecord,
     employeeName,
+    employeeImage,
     stats,
     onOpenCreate,
     onBack,
@@ -26,6 +27,7 @@ export default function AttendanceSidePanel({
         advance: number;
     } | null;
     employeeName: string;
+    employeeImage?: string;
     stats: Stats;
     onOpenCreate: () => void;
     onBack: () => void;
@@ -47,14 +49,25 @@ export default function AttendanceSidePanel({
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">
                             {mode === "day" && selectedDate ? "Day details" : "Employee summary"}
                         </p>
-                        <h2 className="mt-1 text-base font-semibold text-text">
-                            {mode === "day" && selectedDate ? "Selected day" : employeeName}
-                        </h2>
-                        <p className="mt-1 text-sm text-text-muted">
-                            {mode === "day" && selectedDate
-                                ? selectedDateLabel
-                                : "Monthly attendance overview"}
-                        </p>
+                        <div className="flex items-center gap-3">
+                            {!loading && mode === "summary" && employeeImage && (
+                                <img
+                                    src={employeeImage}
+                                    alt={employeeName}
+                                    className="h-10 w-10 rounded-xl object-cover border border-border shadow-sm"
+                                />
+                            )}
+                            <div>
+                                <h2 className="text-base font-semibold text-text">
+                                    {mode === "day" && selectedDate ? "Selected day" : employeeName}
+                                </h2>
+                                <p className="text-sm text-text-muted">
+                                    {mode === "day" && selectedDate
+                                        ? selectedDateLabel
+                                        : "Monthly attendance overview"}
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     {mode === "day" && selectedDate ? (
@@ -114,7 +127,7 @@ export default function AttendanceSidePanel({
                                 Advance amount
                             </p>
                             <p className="mt-2 text-xl font-semibold tabular-nums text-text">
-                                ₹{Number(selectedRecord?.advance || 0).toLocaleString("en-IN")}
+                                ₹{Math.round(Number(selectedRecord?.advance || 0)).toLocaleString("en-IN")}
                             </p>
                             <p className="mt-1 text-xs text-text-muted">
                                 Recorded for the selected date
@@ -138,7 +151,7 @@ export default function AttendanceSidePanel({
                         <SummaryItem label="Payable days" value={stats.payableDays} />
                         <SummaryItem
                             label="Total advance"
-                            value={`₹${stats.totalAdvance.toLocaleString("en-IN")}`}
+                            value={`₹${Math.round(stats.totalAdvance).toLocaleString("en-IN")}`}
                         />
                     </div>
                 )}

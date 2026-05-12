@@ -21,6 +21,7 @@ interface EmployeeData {
     phone?: string;
     salaryType: "daily" | "weekly" | "monthly";
     salaryAmount: number;
+    image?: string;
 }
 
 interface DashboardResponse {
@@ -69,7 +70,7 @@ function toIsoRange(date: string, endOfDay = false) {
 }
 
 function formatCurrency(value: number) {
-    return `₹${Number(value || 0).toLocaleString("en-IN")}`;
+    return `₹${Math.round(value || 0).toLocaleString("en-IN")}`;
 }
 
 function formatDisplayDate(value: string) {
@@ -253,9 +254,18 @@ export default function EmployeeDetailClient({
                                     Employee detail
                                 </span>
 
-                                <h1 className="mt-3 text-2xl font-semibold tracking-tight text-text md:text-3xl">
-                                    {loading ? "Loading employee..." : employee?.name || "Employee details"}
-                                </h1>
+                                <div className="mt-3 flex items-center gap-4">
+                                    {!loading && employee?.image && (
+                                        <img
+                                            src={employee.image}
+                                            alt={employee.name}
+                                            className="h-14 w-14 rounded-2xl object-cover shadow-sm border border-border"
+                                        />
+                                    )}
+                                    <h1 className="text-2xl font-semibold tracking-tight text-text md:text-3xl">
+                                        {loading ? "Loading employee..." : employee?.name || "Employee details"}
+                                    </h1>
+                                </div>
 
                                 <p className="mt-2 max-w-2xl text-sm text-text-muted">
                                     Attendance summary, salary calculation, advances, and payroll documents for the selected period.

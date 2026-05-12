@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import AttendanceCalendar from "@/components/attendance/AttendanceCalendar";
 import AttendanceSidePanel from "@/components/attendance/AttendanceSidePanel";
 import AttendanceModal from "@/components/attendance/AttendanceModal";
+import BulkAttendanceModal from "@/components/attendance/BulkAttendanceModal";
 import SearchableEmployeeSelect from "@/components/ui/SearchableEmployeeSelect";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
@@ -21,6 +22,7 @@ interface Employee {
     _id: string;
     name: string;
     userId?: string;
+    image?: string;
 }
 
 type PanelMode = "summary" | "day";
@@ -39,6 +41,7 @@ export default function AttendanceClient() {
 
     const [panelMode, setPanelMode] = useState<PanelMode>("summary");
     const [modalOpen, setModalOpen] = useState(false);
+    const [bulkModalOpen, setBulkModalOpen] = useState(false);
 
     const normalizeDate = (value: Date | string) => {
         const d = new Date(value);
@@ -201,6 +204,13 @@ export default function AttendanceClient() {
                         />
 
                         <div className="flex flex-wrap gap-3">
+                            <button
+                                onClick={() => setBulkModalOpen(true)}
+                                className="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 px-4 py-2.5 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white shadow-sm"
+                            >
+                                Bulk Mark Attendance
+                            </button>
+
                             {selectedDate && (
                                 <>
                                     <button
@@ -232,7 +242,7 @@ export default function AttendanceClient() {
                     <StatCard label="Half day" value={stats.halfDay} tone="warning" />
                     <StatCard
                         label="Total advance"
-                        value={`₹${stats.totalAdvance.toLocaleString("en-IN")}`}
+                        value={`₹${Math.round(stats.totalAdvance).toLocaleString("en-IN")}`}
                         tone="default"
                     />
                 </div>
@@ -262,6 +272,7 @@ export default function AttendanceClient() {
                         selectedDateLabel={selectedDateLabel}
                         selectedRecord={selectedRecord}
                         employeeName={selectedEmployee?.name || "--"}
+                        employeeImage={selectedEmployee?.image}
                         stats={stats}
                         onOpenCreate={() => {
                             if (selectedDate) setModalOpen(true);
@@ -280,6 +291,7 @@ export default function AttendanceClient() {
                     open={modalOpen}
                     employeeId={employeeId}
                     employeeName={selectedEmployee?.name || ""}
+                    employeeImage={selectedEmployee?.image}
                     date={selectedDate}
                     record={selectedRecord}
                     onClose={() => setModalOpen(false)}
@@ -289,6 +301,15 @@ export default function AttendanceClient() {
                     }}
                 />
             )}
+
+            <BulkAttendanceModal
+                open={bulkModalOpen}
+                onClose={() => setBulkModalOpen(false)}
+                onSaved={async () => {
+                    await loadAttendance();
+                    setBulkModalOpen(false);
+                }}
+            />
         </div>
     );
 }

@@ -39,6 +39,7 @@ export default function Sidebar() {
   const managementNav: NavItem[] = [
     { label: "Products", href: `${roleBase}/products` },
     { label: "Base Rates", href: `${roleBase}/base-rate` },
+    { label: "Reports", href: `${roleBase}/reports` },
   ];
 
   const utilitiesNav: NavItem[] = [
