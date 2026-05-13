@@ -916,29 +916,6 @@ export default function EditUserModal({
                                     </div>
                                 </div>
 
-                                {/* Danger Zone */}
-                                <div className="rounded-2xl border border-red-100 bg-red-50/30 p-4">
-                                    <div className="mb-3 flex items-center gap-2 text-red-600">
-                                        <Trash2 size={16} />
-                                        <h3 className="text-sm font-bold uppercase tracking-wider">Danger Zone</h3>
-                                    </div>
-                                    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                                        <div>
-                                            <p className="text-sm font-semibold text-text">Permanently delete user</p>
-                                            <p className="mt-0.5 text-xs text-text-muted">
-                                                This will remove all associated login credentials.
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleDeleteStart}
-                                            className="inline-flex h-9 items-center justify-center rounded-xl bg-red-100 px-4 text-xs font-bold text-red-600 transition hover:bg-red-200"
-                                        >
-                                            Delete User
-                                        </button>
-                                    </div>
-                                </div>
-
                                 <div className="mt-6 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
                                     <button
                                         type="button"

@@ -38,7 +38,8 @@ export default function Sidebar() {
 
   const managementNav: NavItem[] = [
     { label: "Products", href: `${roleBase}/products` },
-    { label: "Base Rates", href: `${roleBase}/base-rate` },
+    { label: "Supplier Rates", href: `${roleBase}/supplier-rates` },
+    { label: "Price Matrix", href: `${roleBase}/price-matrix` },
     { label: "Reports", href: `${roleBase}/reports` },
   ];
 
@@ -57,6 +58,9 @@ export default function Sidebar() {
   const systemNav: NavItem[] = [
     // { label: "Audit Logs", href: `${roleBase}/audit` },
   ];
+
+  const isAdmin = user.role === "admin";
+  const isManager = user.role === "manager";
 
   return (
     <aside className="flex h-screen w-64 flex-col border-r border-border bg-surface">
@@ -88,7 +92,7 @@ export default function Sidebar() {
             active={isExactActive(roleBase)}
           />
 
-          <SidebarSection title="Operations - (Testing Phase)">
+          {/* <SidebarSection title="Operations - (Testing Phase)">
             {operationsNav.map((item) => (
               <NavLink
                 key={item.href}
@@ -96,17 +100,21 @@ export default function Sidebar() {
                 active={isSectionActive(item.href)}
               />
             ))}
-          </SidebarSection>
+          </SidebarSection> */}
 
-          <SidebarSection title="Management">
-            {managementNav.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={isSectionActive(item.href)}
-              />
-            ))}
-          </SidebarSection>
+          {(isAdmin || isManager) && (
+            <SidebarSection title="Management">
+              {managementNav
+                .filter((item) => isAdmin || item.label === "Reports")
+                .map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    active={isSectionActive(item.href)}
+                  />
+                ))}
+            </SidebarSection>
+          )}
 
           <SidebarSection title="Utilities">
             {utilitiesNav.map((item) => (
@@ -118,50 +126,56 @@ export default function Sidebar() {
             ))}
           </SidebarSection>
 
-          <SidebarSection title="Entities">
-            {entityNav.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={isSectionActive(item.href)}
-              />
-            ))}
-          </SidebarSection>
+          {(isAdmin || isManager) && (
+            <SidebarSection title="Entities">
+              {entityNav
+                .filter((item) => isAdmin || item.label === "Users")
+                .map((item) => (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    active={isSectionActive(item.href)}
+                  />
+                ))}
+            </SidebarSection>
+          )}
 
-          <SidebarSection title="System">
-            {systemNav.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={isSectionActive(item.href)}
-              />
-            ))}
-
-            <button
-              onClick={() => setOpenSettings((v) => !v)}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-text-secondary transition hover:bg-muted"
-            >
-              Website Settings
-
-              <ChevronRight
-                size={16}
-                className={`transition ${openSettings ? "rotate-90" : ""}`}
-              />
-            </button>
-
-            {openSettings && (
-              <div className="ml-3 mt-1">
+          {isAdmin && (
+            <SidebarSection title="System">
+              {systemNav.map((item) => (
                 <NavLink
-                  item={{
-                    label: "Hero Media",
-                    href: `${roleBase}/settings/hero-media`,
-                  }}
-                  active={isSectionActive(`${roleBase}/settings/hero-media`)}
-                  small
+                  key={item.href}
+                  item={item}
+                  active={isSectionActive(item.href)}
                 />
-              </div>
-            )}
-          </SidebarSection>
+              ))}
+
+              <button
+                onClick={() => setOpenSettings((v) => !v)}
+                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm text-text-secondary transition hover:bg-muted"
+              >
+                Website Settings
+
+                <ChevronRight
+                  size={16}
+                  className={`transition ${openSettings ? "rotate-90" : ""}`}
+                />
+              </button>
+
+              {openSettings && (
+                <div className="ml-3 mt-1">
+                  <NavLink
+                    item={{
+                      label: "Hero Media",
+                      href: `${roleBase}/settings/hero-media`,
+                    }}
+                    active={isSectionActive(`${roleBase}/settings/hero-media`)}
+                    small
+                  />
+                </div>
+              )}
+            </SidebarSection>
+          )}
         </nav>
       </div>
     </aside>

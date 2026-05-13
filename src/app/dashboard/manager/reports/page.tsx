@@ -1,4 +1,3 @@
-// Reports Client Page
 import ReportsClient from "@/components/reports/ReportsClient";
 
 export const metadata = {
