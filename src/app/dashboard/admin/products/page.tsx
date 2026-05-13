@@ -202,12 +202,12 @@ export default function ProductsPage() {
                                         </td>
                                         <td className="px-8 py-6">
                                             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-tighter ${
-                                                product.status === "active" || product.isActive
+                                                product.status === "active"
                                                     ? "bg-emerald-500/10 text-emerald-600" 
                                                     : "bg-red-500/10 text-red-600"
                                             }`}>
-                                                <span className={`h-1.5 w-1.5 rounded-full ${product.status === "active" || product.isActive ? "bg-emerald-500" : "bg-red-500"}`} />
-                                                {product.status === "active" || product.isActive ? "Active" : "Inactive"}
+                                                <span className={`h-1.5 w-1.5 rounded-full ${product.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
+                                                {product.status === "active" ? "Active" : "Inactive"}
                                             </span>
                                         </td>
                                         <td className="px-8 py-6">
