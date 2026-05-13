@@ -140,35 +140,45 @@ export default function ReportsClient() {
         const now = new Date();
 
         switch (timeFilter) {
-            case "daily":
-                start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
-                end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+            case "daily": {
+                const d = new Date(now);
+                start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).toISOString();
+                end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString();
                 break;
-            case "weekly":
-                const day = now.getDay();
-                const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-                const monday = new Date(now.setDate(diff));
+            }
+            case "weekly": {
+                const d = new Date(now);
+                const day = d.getDay();
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(d.setDate(diff));
                 start = new Date(monday.setHours(0, 0, 0, 0)).toISOString();
                 end = new Date().toISOString();
                 break;
-            case "monthly":
+            }
+            case "monthly": {
                 start = new Date(month.getFullYear(), month.getMonth(), 1, 0, 0, 0).toISOString();
                 end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
                 break;
-            case "quarterly":
-                const quarter = Math.floor(now.getMonth() / 3);
-                start = new Date(now.getFullYear(), quarter * 3, 1, 0, 0, 0).toISOString();
+            }
+            case "quarterly": {
+                const d = new Date(now);
+                const quarter = Math.floor(d.getMonth() / 3);
+                start = new Date(d.getFullYear(), quarter * 3, 1, 0, 0, 0).toISOString();
                 end = new Date().toISOString();
                 break;
-            case "yearly":
-                start = new Date(now.getFullYear(), 0, 1, 0, 0, 0).toISOString();
+            }
+            case "yearly": {
+                const d = new Date(now);
+                start = new Date(d.getFullYear(), 0, 1, 0, 0, 0).toISOString();
                 end = new Date().toISOString();
                 break;
-            case "all-time":
+            }
+            case "all-time": {
                 const emp = data.find(d => d.employee._id === targetId);
                 start = emp?.employee.joiningDate || "2020-01-01T00:00:00.000Z";
                 end = new Date().toISOString();
                 break;
+            }
         }
 
         const endpoint = targetId === "bulk" ? "/pdf/bulk-employee-report" : "/pdf/employee-report";
