@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
+import { usePDFPreview } from "@/hooks/usePDFPreview";
+import PDFPreviewModal from "@/components/shared/PDFPreviewModal";
 
 /* ================= TYPES ================= */
 
@@ -91,6 +93,15 @@ export default function ViewSalesEnquiryModal({
     const [loading, setLoading] = useState(true);
     const [orderId, setOrderId] = useState<string | null>(null);
 
+    const { 
+        isOpen: previewOpen, 
+        pdfUrl: previewUrl, 
+        title: previewTitle, 
+        preview: triggerPreview, 
+        close: closePreview, 
+        download: downloadPDF 
+    } = usePDFPreview();
+
     const fetchData = async () => {
         try {
             setLoading(true);
@@ -117,26 +128,11 @@ export default function ViewSalesEnquiryModal({
     };
 
     const handleDownloadPDF = async (quotationId: string) => {
-        try {
-            const res = await api.get(
-                `/pdf/sales/quotation/${quotationId}/pdf`, // ✅ correct route
-                { responseType: "blob" }
-            );
-
-            const url = window.URL.createObjectURL(new Blob([res.data]));
-            const link = document.createElement("a");
-
-            link.href = url;
-            link.setAttribute("download", `SQ-${quotationId}.pdf`);
-
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-        } catch (error) {
-            console.error(error);
-            alert("Failed to download quotation PDF");
-        }
+        triggerPreview(
+            `/pdf/sales/quotation/${quotationId}/pdf`,
+            `SQ-${quotationId}.pdf`,
+            `Sales Quotation - ${data?.customer?.name}`
+        );
     };
 
     const handleConvertToOrder = async () => {
@@ -377,6 +373,13 @@ export default function ViewSalesEnquiryModal({
                 onClick={(e) => e.stopPropagation()}
                 className="flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-3xl border border-border bg-white shadow-2xl"
             >
+                <PDFPreviewModal
+                    open={previewOpen}
+                    onClose={closePreview}
+                    pdfUrl={previewUrl}
+                    title={previewTitle}
+                    onDownload={downloadPDF}
+                />
                 {/* HEADER */}
                 <div className="border-b border-border bg-white px-5 py-4 md:px-6">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -808,7 +811,7 @@ export default function ViewSalesEnquiryModal({
                                 onClick={() => handleDownloadPDF(data._id)}
                                 className="rounded-xl border border-accent px-4 py-2 text-sm font-medium text-accent transition hover:bg-accent hover:text-white"
                             >
-                                Download PDF
+                                Preview PDF
                             </button>
 
                             <button

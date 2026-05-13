@@ -16,6 +16,8 @@ import {
     ReceiptText,
     User2,
 } from "lucide-react";
+import { usePDFPreview } from "@/hooks/usePDFPreview";
+import PDFPreviewModal from "@/components/shared/PDFPreviewModal";
 
 /* ================= TYPES ================= */
 
@@ -74,7 +76,16 @@ export default function SalesOrderPage() {
 
     const [data, setData] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
-    const [downloadingPdf, setDownloadingPdf] = useState(false);
+    
+    const { 
+        isOpen: previewOpen, 
+        pdfUrl: previewUrl, 
+        title: previewTitle, 
+        preview: triggerPreview, 
+        close: closePreview, 
+        download: downloadPDF 
+    } = usePDFPreview();
+
     const [dispatchOpen, setDispatchOpen] = useState(false);
     const [deliveryOpen, setDeliveryOpen] = useState(false);
 
@@ -159,30 +170,11 @@ useEffect(() => {
     }, [data]);
 
     const handleDownloadPdf = async () => {
-        try {
-            setDownloadingPdf(true);
-
-            const response = await api.get(`/pdf/sales/order/${id}/pdf`, {
-                responseType: "blob",
-            });
-
-            const blob = new Blob([response.data], { type: "application/pdf" });
-            const fileURL = window.URL.createObjectURL(blob);
-
-            const link = document.createElement("a");
-            link.href = fileURL;
-            link.download = `SO-${data?._id || id}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            setTimeout(() => window.URL.revokeObjectURL(fileURL), 100);
-        } catch (error: unknown) {
-            console.error(error);
-            alert((error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to download PDF");
-        } finally {
-            setDownloadingPdf(false);
-        }
+        triggerPreview(
+            `/pdf/sales/order/${id}/pdf`,
+            `SO-${data?._id || id}.pdf`,
+            `Sales Order - ${data?.customer?.name}`
+        );
     };
 
     if (loading) {
@@ -247,6 +239,13 @@ useEffect(() => {
 
     return (
         <div className="space-y-6 p-4 md:p-6">
+            <PDFPreviewModal
+                open={previewOpen}
+                onClose={closePreview}
+                pdfUrl={previewUrl}
+                title={previewTitle}
+                onDownload={downloadPDF}
+            />
             {/* TOP BAR */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
@@ -289,10 +288,9 @@ useEffect(() => {
 
                     <button
                         onClick={handleDownloadPdf}
-                        disabled={downloadingPdf}
                         className="bg-accent text-white px-4 py-2 rounded-xl text-sm"
                     >
-                        Download PDF
+                        Preview PDF
                     </button>
                 </div>
             </div>

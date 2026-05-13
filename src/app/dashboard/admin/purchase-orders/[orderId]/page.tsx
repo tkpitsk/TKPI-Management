@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import GRNModal from "@/components/purchase/GRNModal";
+import { usePDFPreview } from "@/hooks/usePDFPreview";
+import PDFPreviewModal from "@/components/shared/PDFPreviewModal";
 
 /* ================= TYPES ================= */
 
@@ -51,6 +53,15 @@ export default function OrderDetailPage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [showGRN, setShowGRN] = useState(false);
 
+    const { 
+        isOpen: previewOpen, 
+        pdfUrl: previewUrl, 
+        title: previewTitle, 
+        preview: triggerPreview, 
+        close: closePreview, 
+        download: downloadPDF 
+    } = usePDFPreview();
+
     /* ================= FETCH ================= */
 
     const fetchOrder = async () => {
@@ -84,23 +95,11 @@ export default function OrderDetailPage() {
     };
 
     const handleDownload = async () => {
-        try {
-            const res = await api.get(
-                `/pdf/purchase/order/${orderId}/pdf`,
-                { responseType: "blob" }
-            );
-
-            const url = window.URL.createObjectURL(new Blob([res.data]));
-            const link = document.createElement("a");
-
-            link.href = url;
-            link.setAttribute("download", `PO-${orderId}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } catch {
-            alert("Failed to download PDF");
-        }
+        triggerPreview(
+            `/pdf/purchase/order/${orderId}/pdf`,
+            `PO-${orderId}.pdf`,
+            `Purchase Order - ${data?.supplier?.name}`
+        );
     };
 
     /* ================= HELPERS ================= */
@@ -163,6 +162,13 @@ export default function OrderDetailPage() {
 
     return (
         <div className="p-6 space-y-6">
+            <PDFPreviewModal
+                open={previewOpen}
+                onClose={closePreview}
+                pdfUrl={previewUrl}
+                title={previewTitle}
+                onDownload={downloadPDF}
+            />
 
             {/* 🔙 BACK BUTTON */}
             <button
@@ -203,7 +209,7 @@ export default function OrderDetailPage() {
                         onClick={handleDownload}
                         className="text-sm border border-border px-4 py-2 rounded-lg hover:bg-muted"
                     >
-                        Download PDF
+                        Preview PDF
                     </button>
 
                     {data.status === "draft" && (

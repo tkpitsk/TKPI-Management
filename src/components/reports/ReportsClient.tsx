@@ -5,7 +5,10 @@ import api from "@/lib/api";
 import {
     Calendar,
     Download,
+    Eye,
+    FileBarChart,
     FileText,
+    Filter,
     History,
     IndianRupee,
     Loader2,
@@ -13,6 +16,8 @@ import {
     TrendingUp,
     Users,
 } from "lucide-react";
+import PDFPreviewModal from "@/components/shared/PDFPreviewModal";
+import { usePDFPreview } from "@/hooks/usePDFPreview";
 
 interface ReportSummary {
     employee: {
@@ -35,12 +40,21 @@ interface ReportSummary {
 }
 
 export default function ReportsClient() {
+    const [timeFilter, setTimeFilter] = useState<"daily" | "weekly" | "monthly" | "quarterly" | "yearly" | "all-time">("monthly");
     const [month, setMonth] = useState(new Date());
-    const [isAllTime, setIsAllTime] = useState(false);
     const [search, setSearch] = useState("");
     const [data, setData] = useState<ReportSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState<string | null>(null);
+
+    const { 
+        isOpen: previewOpen, 
+        pdfUrl: previewUrl, 
+        title: previewTitle, 
+        preview: triggerPreview, 
+        close: closePreview, 
+        download: downloadPDF 
+    } = usePDFPreview();
 
     const monthOptions = useMemo(() => {
         const options = [];
@@ -56,14 +70,40 @@ export default function ReportsClient() {
         setLoading(true);
         try {
             let start, end;
-            if (isAllTime) {
-                // For all time, we use a very early start date.
-                // The backend will handle calculations since joining per employee.
-                start = "2020-01-01T00:00:00.000Z";
-                end = new Date().toISOString();
-            } else {
-                start = new Date(month.getFullYear(), month.getMonth(), 1).toISOString();
-                end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
+            const now = new Date();
+
+            switch (timeFilter) {
+                case "daily":
+                    start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+                    end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+                    break;
+                case "weekly":
+                    const day = now.getDay();
+                    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+                    const monday = new Date(now.setDate(diff));
+                    start = new Date(monday.setHours(0, 0, 0, 0)).toISOString();
+                    end = new Date().toISOString();
+                    break;
+                case "monthly":
+                    start = new Date(month.getFullYear(), month.getMonth(), 1, 0, 0, 0).toISOString();
+                    end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
+                    break;
+                case "quarterly":
+                    const quarter = Math.floor(now.getMonth() / 3);
+                    start = new Date(now.getFullYear(), quarter * 3, 1, 0, 0, 0).toISOString();
+                    end = new Date().toISOString();
+                    break;
+                case "yearly":
+                    start = new Date(now.getFullYear(), 0, 1, 0, 0, 0).toISOString();
+                    end = new Date().toISOString();
+                    break;
+                case "all-time":
+                    start = "2020-01-01T00:00:00.000Z";
+                    end = new Date().toISOString();
+                    break;
+                default:
+                    start = new Date(month.getFullYear(), month.getMonth(), 1).toISOString();
+                    end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
             }
 
             const res = await api.get(`/employee-report/all-summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
@@ -77,7 +117,7 @@ export default function ReportsClient() {
 
     useEffect(() => {
         fetchReports();
-    }, [month, isAllTime]);
+    }, [month, timeFilter]);
 
     const filteredData = useMemo(() => {
         return data.filter(item =>
@@ -95,106 +135,110 @@ export default function ReportsClient() {
         }), { earned: 0, advance: 0, net: 0, count: 0 });
     }, [filteredData]);
 
-    const handleDownloadIndividual = async (employeeId: string, name: string) => {
-        setDownloading(employeeId);
-        try {
-            let start, end;
-            if (isAllTime) {
-                // Find employee's joining date
-                const emp = data.find(d => d.employee._id === employeeId);
+    const handlePreview = async (targetId: string | "bulk", name: string) => {
+        let start, end;
+        const now = new Date();
+
+        switch (timeFilter) {
+            case "daily":
+                start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0).toISOString();
+                end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).toISOString();
+                break;
+            case "weekly":
+                const day = now.getDay();
+                const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                const monday = new Date(now.setDate(diff));
+                start = new Date(monday.setHours(0, 0, 0, 0)).toISOString();
+                end = new Date().toISOString();
+                break;
+            case "monthly":
+                start = new Date(month.getFullYear(), month.getMonth(), 1, 0, 0, 0).toISOString();
+                end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
+                break;
+            case "quarterly":
+                const quarter = Math.floor(now.getMonth() / 3);
+                start = new Date(now.getFullYear(), quarter * 3, 1, 0, 0, 0).toISOString();
+                end = new Date().toISOString();
+                break;
+            case "yearly":
+                start = new Date(now.getFullYear(), 0, 1, 0, 0, 0).toISOString();
+                end = new Date().toISOString();
+                break;
+            case "all-time":
+                const emp = data.find(d => d.employee._id === targetId);
                 start = emp?.employee.joiningDate || "2020-01-01T00:00:00.000Z";
                 end = new Date().toISOString();
-            } else {
-                start = new Date(month.getFullYear(), month.getMonth(), 1).toISOString();
-                end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
-            }
-
-            const res = await api.get(
-                `/pdf/employee-report?employeeId=${employeeId}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&type=${isAllTime ? 'all-time' : 'monthly'}`,
-                { responseType: "blob" }
-            );
-
-            const blob = new Blob([res.data], { type: "application/pdf" });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", `report-${name}-${isAllTime ? 'all-time' : 'monthly'}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } catch (error) {
-            console.error("Download failed", error);
-        } finally {
-            setDownloading(null);
+                break;
         }
-    };
 
-    const handleDownloadBulk = async () => {
-        setDownloading("bulk");
-        try {
-            let start, end;
-            if (isAllTime) {
-                start = "2020-01-01T00:00:00.000Z";
-                end = new Date().toISOString();
-            } else {
-                start = new Date(month.getFullYear(), month.getMonth(), 1).toISOString();
-                end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
-            }
+        const endpoint = targetId === "bulk" ? "/pdf/bulk-employee-report" : "/pdf/employee-report";
+        const params = new URLSearchParams({
+            start: start!,
+            end: end!,
+            type: timeFilter
+        });
+        if (targetId !== "bulk") params.append("employeeId", targetId);
 
-            const res = await api.get(
-                `/pdf/bulk-employee-report?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&type=${isAllTime ? 'all-time' : 'monthly'}`,
-                { responseType: "blob" }
-            );
-
-            const blob = new Blob([res.data], { type: "application/pdf" });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.setAttribute("download", `bulk-report-${isAllTime ? 'all-time' : 'monthly'}.pdf`);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-        } catch (error) {
-            console.error("Bulk download failed", error);
-        } finally {
-            setDownloading(null);
-        }
+        triggerPreview(
+            `${endpoint}?${params.toString()}`,
+            `report-${name}-${timeFilter}.pdf`,
+            `${name} - ${timeFilter.charAt(0).toUpperCase() + timeFilter.slice(1)} Report`
+        );
     };
 
     return (
         <div className="space-y-6">
+            <PDFPreviewModal
+                open={previewOpen}
+                onClose={closePreview}
+                pdfUrl={previewUrl}
+                title={previewTitle}
+                onDownload={downloadPDF}
+            />
+
             {/* Header Section */}
             <div className="rounded-[28px] border border-border bg-surface p-6 shadow-sm">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-1">
-                        <span className="inline-flex rounded-full bg-brand-primary/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-brand-primary">
-                            Data Insights
-                        </span>
-                        <h1 className="text-3xl font-semibold tracking-tight text-text">Reports Centre</h1>
-                        <p className="max-w-2xl text-sm text-text-muted">
-                            A comprehensive overview of workforce payroll and attendance. Download individual or aggregated reports for all employees.
+                <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <span className="inline-flex rounded-full bg-brand-primary/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary">
+                                Intelligence
+                            </span>
+                        </div>
+                        <h1 className="text-4xl font-black tracking-tight text-text">Reports Centre</h1>
+                        <p className="max-w-xl text-sm leading-relaxed text-text-muted">
+                            Advanced workforce analytics and payroll intelligence. Filter by time range and generate professional PDF reports.
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3">
-                        <button
-                            onClick={() => setIsAllTime(!isAllTime)}
-                            className={`inline-flex h-11 items-center gap-2 rounded-2xl border px-4 text-sm font-medium transition ${isAllTime
-                                ? "border-brand-primary bg-brand-primary text-white shadow-md"
-                                : "border-border bg-white text-text hover:bg-muted"
-                                }`}
-                        >
-                            <History size={16} />
-                            {isAllTime ? "Since Joined (All Time)" : "Month-wise View"}
-                        </button>
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                        {/* Time Range Filter */}
+                        <div className="flex items-center rounded-2xl border border-border bg-white p-1.5 shadow-sm">
+                            <div className="flex items-center gap-2 px-3 pr-4 text-text-muted border-r border-border mr-1">
+                                <Filter size={14} />
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Range</span>
+                            </div>
+                            {(["daily", "weekly", "monthly", "quarterly", "yearly", "all-time"] as const).map((filter) => (
+                                <button
+                                    key={filter}
+                                    onClick={() => setTimeFilter(filter)}
+                                    className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all ${timeFilter === filter
+                                            ? "bg-brand-primary text-white shadow-md"
+                                            : "text-text-muted hover:bg-muted hover:text-text"
+                                        }`}
+                                >
+                                    {filter.replace("-", " ")}
+                                </button>
+                            ))}
+                        </div>
 
-                        {!isAllTime && (
+                        {timeFilter === "monthly" && (
                             <div className="relative">
-                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
                                 <select
                                     value={month.toISOString()}
                                     onChange={(e) => setMonth(new Date(e.target.value))}
-                                    className="h-11 w-48 rounded-2xl border border-border bg-white pl-10 pr-4 text-sm font-medium text-text outline-none focus:border-brand-primary"
+                                    className="h-11 w-48 rounded-2xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-text outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
                                 >
                                     {monthOptions.map((d) => (
                                         <option key={d.toISOString()} value={d.toISOString()}>
@@ -207,20 +251,20 @@ export default function ReportsClient() {
 
                         <button
                             disabled={loading || downloading === "bulk"}
-                            onClick={handleDownloadBulk}
-                            className="inline-flex h-11 items-center gap-2 rounded-2xl bg-brand-primary px-5 text-sm font-semibold text-white shadow-lg transition hover:opacity-90 disabled:opacity-50"
+                            onClick={() => handlePreview("bulk", "Organization-wide Summary")}
+                            className="inline-flex h-11 items-center gap-2 rounded-2xl bg-brand-primary px-6 text-sm font-bold text-white shadow-lg transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
                         >
-                            {downloading === "bulk" ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-                            Download All Reports
+                            <FileBarChart size={18} />
+                            Generate Bulk Report
                         </button>
                     </div>
                 </div>
 
-                <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <SummaryCard label="Total Employees" value={totals.count} icon={<Users size={20} />} tone="default" />
-                    <SummaryCard label="Total Earned" value={`₹${totals.earned.toLocaleString("en-IN")}`} icon={<TrendingUp size={20} />} tone="success" />
-                    <SummaryCard label="Total Advance" value={`₹${totals.advance.toLocaleString("en-IN")}`} icon={<FileText size={20} />} tone="warning" />
-                    <SummaryCard label="Net Payable" value={`₹${totals.net.toLocaleString("en-IN")}`} icon={<IndianRupee size={20} />} tone="primary" />
+                <div className="mt-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+                    <SummaryCard label="Headcount" value={totals.count} icon={<Users size={20} />} tone="default" />
+                    <SummaryCard label="Gross Earnings" value={`₹${totals.earned.toLocaleString("en-IN")}`} icon={<TrendingUp size={20} />} tone="success" />
+                    <SummaryCard label="Total Deductions" value={`₹${totals.advance.toLocaleString("en-IN")}`} icon={<FileText size={20} />} tone="warning" />
+                    <SummaryCard label="Net Distribution" value={`₹${totals.net.toLocaleString("en-IN")}`} icon={<IndianRupee size={20} />} tone="primary" />
                 </div>
             </div>
 
@@ -304,11 +348,12 @@ export default function ReportsClient() {
                                         <td className="px-6 py-4 text-right font-bold text-text">₹{item.summary.netSalary.toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-right">
                                             <button
-                                                disabled={downloading !== null}
-                                                onClick={() => handleDownloadIndividual(item.employee._id, item.employee.name)}
+                                                disabled={loading}
+                                                onClick={() => handlePreview(item.employee._id, item.employee.name)}
                                                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-text-muted transition hover:bg-brand-primary hover:text-white"
+                                                title="Preview Report"
                                             >
-                                                {downloading === item.employee._id ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                                                <Eye size={16} />
                                             </button>
                                         </td>
                                     </tr>

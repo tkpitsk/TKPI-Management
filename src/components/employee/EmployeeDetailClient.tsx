@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuth } from "@/context/auth-context";
+import { usePDFPreview } from "@/hooks/usePDFPreview";
+import PDFPreviewModal from "@/components/shared/PDFPreviewModal";
 
 type AttendanceStatus = "present" | "absent" | "half-day";
 
@@ -107,57 +109,17 @@ export default function EmployeeDetailClient({
     const [loading, setLoading] = useState(true);
     const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
     const [error, setError] = useState("");
-    const [downloadingType, setDownloadingType] = useState<"salary" | "report" | null>(null);
+    
+    const { 
+        isOpen: previewOpen, 
+        pdfUrl: previewUrl, 
+        title: previewTitle, 
+        preview: triggerPreview, 
+        close: closePreview, 
+        download: downloadPDF 
+    } = usePDFPreview();
 
-    const downloadFile = async ({
-        path,
-        fallbackFileName,
-        type,
-    }: {
-        path: string;
-        fallbackFileName: string;
-        type: "salary" | "report";
-    }) => {
-        try {
-            setDownloadingType(type);
-
-            const response = await api.get(path, { responseType: "blob" });
-
-            const blob = new Blob([response.data], {
-                type: response.headers["content-type"] || "application/pdf",
-            });
-
-            let fileName = fallbackFileName;
-            const contentDisposition = response.headers["content-disposition"];
-
-            if (contentDisposition) {
-                const match = contentDisposition.match(
-                    /filename\*?=(?:UTF-8'')?["']?([^;"']+)/i
-                );
-
-                if (match?.[1]) {
-                    fileName = decodeURIComponent(match[1].replace(/["']/g, ""));
-                }
-            }
-
-            const blobUrl = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = blobUrl;
-            link.setAttribute("download", fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-
-            setTimeout(() => {
-                window.URL.revokeObjectURL(blobUrl);
-            }, 100);
-        } catch (error) {
-            console.error(`Failed to download ${type}`, error);
-            alert("Download failed. Please login again or try after some time.");
-        } finally {
-            setDownloadingType(null);
-        }
-    };
+    /* PDF Logic handled by usePDFPreview */
 
     const fetchDashboard = useCallback(async () => {
         try {
@@ -216,27 +178,38 @@ export default function EmployeeDetailClient({
     };
 
     const handleDownloadSalarySlip = async () => {
-        await downloadFile({
-            path: `/pdf/salary-slip?employeeId=${employeeId}&start=${encodeURIComponent(
-                toIsoRange(startDate, false)
-            )}&end=${encodeURIComponent(toIsoRange(endDate, true))}`,
-            fallbackFileName: `salary-slip-${employee?.name || employeeId}.pdf`,
-            type: "salary",
-        });
+        const path = `/pdf/salary-slip?employeeId=${employeeId}&start=${encodeURIComponent(
+            toIsoRange(startDate, false)
+        )}&end=${encodeURIComponent(toIsoRange(endDate, true))}`;
+        
+        triggerPreview(
+            path,
+            `salary-slip-${employee?.name || employeeId}.pdf`,
+            `Salary Slip - ${employee?.name}`
+        );
     };
 
     const handleDownloadReport = async () => {
-        await downloadFile({
-            path: `/pdf/employee-report?employeeId=${employeeId}&start=${encodeURIComponent(
-                toIsoRange(startDate, false)
-            )}&end=${encodeURIComponent(toIsoRange(endDate, true))}&type=monthly`,
-            fallbackFileName: `employee-report-${employee?.name || employeeId}.pdf`,
-            type: "report",
-        });
+        const path = `/pdf/employee-report?employeeId=${employeeId}&start=${encodeURIComponent(
+            toIsoRange(startDate, false)
+        )}&end=${encodeURIComponent(toIsoRange(endDate, true))}&type=monthly`;
+        
+        triggerPreview(
+            path,
+            `employee-report-${employee?.name || employeeId}.pdf`,
+            `Attendance Report - ${employee?.name}`
+        );
     };
 
     return (
         <div className="space-y-5 md:space-y-6">
+            <PDFPreviewModal
+                open={previewOpen}
+                onClose={closePreview}
+                pdfUrl={previewUrl}
+                title={previewTitle}
+                onDownload={downloadPDF}
+            />
             <section className="overflow-hidden rounded-[28px] border border-border/70 bg-surface shadow-[0_10px_30px_rgba(15,15,15,0.05)]">
                 <div className="border-b border-border/60 bg-[linear-gradient(135deg,rgba(75,39,51,0.05),rgba(255,255,255,0))] p-5 md:p-6">
                     <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -309,19 +282,17 @@ export default function EmployeeDetailClient({
                                     <button
                                         type="button"
                                         onClick={handleDownloadReport}
-                                        disabled={downloadingType !== null}
-                                        className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-border bg-white px-4 py-2.5 text-xs font-medium text-text transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-border bg-white px-4 py-2.5 text-xs font-medium text-text transition hover:bg-muted"
                                     >
-                                        {downloadingType === "report" ? "Downloading..." : "Download report"}
+                                        Preview report
                                     </button>
 
                                     <button
                                         type="button"
                                         onClick={handleDownloadSalarySlip}
-                                        disabled={downloadingType !== null}
-                                        className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-2.5 text-xs font-medium text-brand-primary transition hover:bg-brand-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-4 py-2.5 text-xs font-medium text-brand-primary transition hover:bg-brand-primary/10"
                                     >
-                                        {downloadingType === "salary" ? "Downloading..." : "Salary Slip"}
+                                        Salary Slip
                                     </button>
                                 </div>
                             </div>
@@ -491,16 +462,14 @@ export default function EmployeeDetailClient({
                             <DownloadCard
                                 title="Salary slip PDF"
                                 subtitle="Payroll summary for selected period"
-                                actionLabel={downloadingType === "salary" ? "Downloading..." : "Download"}
+                                actionLabel="Preview"
                                 onClick={handleDownloadSalarySlip}
-                                disabled={downloadingType !== null}
                             />
                             <DownloadCard
                                 title="Employee report PDF"
                                 subtitle="Attendance and advance report"
-                                actionLabel={downloadingType === "report" ? "Downloading..." : "Download"}
+                                actionLabel="Preview"
                                 onClick={handleDownloadReport}
-                                disabled={downloadingType !== null}
                             />
                         </div>
                     </section>
