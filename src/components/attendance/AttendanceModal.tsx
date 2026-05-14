@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { CheckCircle2, Clock3, X, XCircle } from "lucide-react";
+import { formatLocalISO } from "@/utils/date";
 
 type AttendanceStatus = "present" | "absent" | "half-day";
 
@@ -66,7 +67,7 @@ export default function AttendanceModal({
             setSaving(true);
             await api.post("/attendance", {
                 employeeId,
-                date: date.toISOString(),
+                date: formatLocalISO(date),
                 status,
                 advance: Number(advance || 0),
                 reason,

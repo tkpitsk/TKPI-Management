@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import api from "@/lib/api";
 import { CheckCircle2, Clock3, X, XCircle, Users, Search, Calendar, CalendarRange, AlertCircle } from "lucide-react";
+import { formatLocalISO } from "@/utils/date";
 
 type AttendanceStatus = "present" | "absent" | "half-day";
 
@@ -31,8 +32,8 @@ export default function BulkAttendanceModal({
     
     // Date Range State
     const [isRange, setIsRange] = useState(false);
-    const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
+    const [startDate, setStartDate] = useState(formatLocalISO(new Date()));
+    const [endDate, setEndDate] = useState(formatLocalISO(new Date()));
     
     const [searchQuery, setSearchQuery] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -61,8 +62,10 @@ export default function BulkAttendanceModal({
 
     const filteredEmployees = useMemo(() => {
         return employees.filter(e => {
-            const matchesSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                 (e.userId || "").toLowerCase().includes(searchQuery.toLowerCase());
+            const name = e.name || "";
+            const userId = e.userId || "";
+            const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                 userId.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesRole = roleFilter === "all" || e.role === roleFilter;
             return matchesSearch && matchesRole;
         });

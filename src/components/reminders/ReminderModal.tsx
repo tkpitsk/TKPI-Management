@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import type { Reminder } from "@/types/reminder";
-import { isPastDate } from "@/utils/date";
+import { isPastDate, formatLocalISO } from "@/utils/date";
 import { Pencil, Trash2, X, User as UserIcon, Loader2, ChevronDown } from "lucide-react";
 
 interface Props {
@@ -44,9 +44,9 @@ export default function ReminderModal({
             setTitle(reminder.title || "");
             setDescription(reminder.description || "");
             setTime(reminder.time || "");
-            setSelectedDate(new Date(reminder.date).toISOString().slice(0, 10));
+            setSelectedDate(formatLocalISO(new Date(reminder.date)));
             setSelectedExpiryDate(
-                new Date(reminder.expiryDate).toISOString().slice(0, 10)
+                formatLocalISO(new Date(reminder.expiryDate))
             );
             setPriority(reminder.priority || "medium");
             setRepeat(reminder.repeat || "none");
@@ -56,7 +56,7 @@ export default function ReminderModal({
         }
 
         const baseDate = date ? new Date(date) : new Date();
-        const formatted = baseDate.toISOString().slice(0, 10);
+        const formatted = formatLocalISO(baseDate);
 
         setTitle("");
         setDescription("");
@@ -324,7 +324,7 @@ export default function ReminderModal({
                                 </label>
                                 <input
                                     type="date"
-                                    min={mode === "create" ? new Date().toISOString().slice(0, 10) : undefined}
+                                    min={mode === "create" ? formatLocalISO(new Date()) : undefined}
                                     className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-primary"
                                     value={selectedDate}
                                     onChange={(e) => setSelectedDate(e.target.value)}
@@ -351,7 +351,7 @@ export default function ReminderModal({
                                 </label>
                                 <input
                                     type="date"
-                                    min={selectedDate || new Date().toISOString().slice(0, 10)}
+                                    min={selectedDate || formatLocalISO(new Date())}
                                     className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-primary"
                                     value={selectedExpiryDate}
                                     onChange={(e) => setSelectedExpiryDate(e.target.value)}
