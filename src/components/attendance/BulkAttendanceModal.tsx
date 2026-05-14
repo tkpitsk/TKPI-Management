@@ -46,8 +46,8 @@ export default function BulkAttendanceModal({
             setLoading(true);
             try {
                 const { data } = await api.get("/users");
-                const validRoles = ["employee", "manager", "worker"];
-                const filtered = (data || []).filter((u: Employee) => validRoles.includes(u.role));
+                const validRoles = ["admin", "manager", "employee", "worker"];
+                const filtered = (data || []).filter((u: Employee) => validRoles.includes(u.role) && (u as any).isActive !== false);
                 setEmployees(filtered);
             } catch (error) {
                 console.error("Failed to load employees", error);
@@ -190,9 +190,10 @@ export default function BulkAttendanceModal({
                                     className="h-11 rounded-2xl border border-border bg-white px-4 text-sm outline-none transition focus:border-brand-primary"
                                 >
                                     <option value="all">All Roles</option>
+                                    <option value="admin">Admins Only</option>
+                                    <option value="manager">Managers Only</option>
                                     <option value="employee">Staff Only</option>
                                     <option value="worker">Worker Only</option>
-                                    <option value="manager">Managers Only</option>
                                 </select>
                             </div>
 
