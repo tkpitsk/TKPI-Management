@@ -35,6 +35,7 @@ export default function DailyOverviewModal({
   const [data, setData] = useState<DailyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
 
   useEffect(() => {
     if (open && date) {
@@ -46,7 +47,8 @@ export default function DailyOverviewModal({
     if (!date) return;
     try {
       setLoading(true);
-      const { data } = await api.get(`/daily-overview?date=${date.toISOString()}`);
+      const dateStr = date.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const { data } = await api.get(`/daily-overview?date=${dateStr}`);
       setData(data);
     } catch (error) {
       console.error("Failed to fetch daily overview:", error);
@@ -66,8 +68,13 @@ export default function DailyOverviewModal({
   const filteredAttendance = data?.attendance.filter((a) => {
     const name = a.employee?.name?.toLowerCase() || "";
     const userId = a.employee?.userId?.toLowerCase() || "";
+    const role = a.employee?.role || "";
     const searchTerm = search.toLowerCase();
-    return name.includes(searchTerm) || userId.includes(searchTerm);
+    
+    const matchesSearch = name.includes(searchTerm) || userId.includes(searchTerm);
+    const matchesRole = roleFilter === "all" || role === roleFilter;
+    
+    return matchesSearch && matchesRole;
   }) || [];
 
   const filteredReminders = data?.reminders.filter((r) =>
@@ -106,7 +113,7 @@ export default function DailyOverviewModal({
             </div>
           </div>
 
-          <div className="mt-6 flex items-center gap-4">
+          <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
               <input
@@ -115,6 +122,28 @@ export default function DailyOverviewModal({
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-11 w-full rounded-2xl border border-border bg-white pl-10 pr-4 text-sm outline-none transition focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
               />
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: "all", label: "All" },
+                { id: "admin", label: "Admins" },
+                { id: "manager", label: "Managers" },
+                { id: "employee", label: "Employees" },
+                { id: "worker", label: "Workers" }
+              ].map((role) => (
+                <button
+                  key={role.id}
+                  onClick={() => setRoleFilter(role.id)}
+                  className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                    roleFilter === role.id
+                      ? "bg-brand-primary text-white shadow-md shadow-brand-primary/20"
+                      : "bg-white border border-border text-text-muted hover:border-brand-primary/30 hover:text-brand-primary"
+                  }`}
+                >
+                  {role.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
