@@ -17,6 +17,7 @@ export default function AttendanceCalendar({
     selectedDate,
     onMonthChange,
     onSelectDate,
+    onSelectOverview,
 }: {
     month: Date;
     records: AttendanceRecord[];
@@ -24,6 +25,7 @@ export default function AttendanceCalendar({
     selectedDate?: Date | null;
     onMonthChange: (d: Date) => void;
     onSelectDate: (date: Date, record: AttendanceRecord | null) => void;
+    onSelectOverview?: (date: Date) => void;
 }) {
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
@@ -141,6 +143,7 @@ export default function AttendanceCalendar({
                                     isToday={isToday}
                                     isSelected={isSelected}
                                     onClick={() => onSelectDate(date, record)}
+                                    onOverview={onSelectOverview ? () => onSelectOverview(date) : undefined}
                                 />
                             );
                         })}

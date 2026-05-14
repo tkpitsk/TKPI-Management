@@ -7,12 +7,14 @@ export default function ReminderDayCell({
     isSelected = false,
     isDisabled = false,
     onClick,
+    onOverview,
 }: {
     date: Date;
     reminders?: Reminder[];
     isSelected?: boolean;
     isDisabled?: boolean;
     onClick: () => void;
+    onOverview?: (e: React.MouseEvent) => void;
 }) {
     const hasReminders = reminders.length > 0;
     const expiredCount = reminders.filter(isExpired).length;
@@ -23,8 +25,7 @@ export default function ReminderDayCell({
     const moreCount = reminders.length - 1;
 
     return (
-        <button
-            type="button"
+        <div
             onClick={() => {
                 if (!isDisabled) onClick();
             }}
@@ -62,6 +63,32 @@ export default function ReminderDayCell({
                     <span className="shrink-0 rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold text-text">
                         {reminders.length}
                     </span>
+                )}
+
+                {onOverview && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOverview(e);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/5 text-text-muted opacity-0 transition-all hover:bg-brand-primary hover:text-white group-hover:opacity-100"
+                        title="Quick Overview"
+                    >
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            width="14" 
+                            height="14" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2.5" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                        >
+                            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                        </svg>
+                    </button>
                 )}
             </div>
 
@@ -108,6 +135,6 @@ export default function ReminderDayCell({
                     </div>
                 )}
             </div>
-        </button>
+        </div>
     );
 }

@@ -15,6 +15,7 @@ interface Props {
     onEdit: (reminder: Reminder) => void;
     onDelete: (id: string) => void;
     onBack: () => void;
+    onViewOverview?: () => void;
 }
 
 export default function ReminderSidePanel({
@@ -29,6 +30,7 @@ export default function ReminderSidePanel({
     onEdit,
     onDelete,
     onBack,
+    onViewOverview,
 }: Props) {
     return (
         <div className="rounded-[28px] border border-border bg-surface shadow-sm overflow-hidden">
@@ -139,6 +141,28 @@ export default function ReminderSidePanel({
                                     );
                                 })}
                             </div>
+                        )}
+
+                        {onViewOverview && (
+                            <button
+                                onClick={onViewOverview}
+                                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 px-4 py-3 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
+                            >
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    width="16" 
+                                    height="16" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2.5" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round"
+                                >
+                                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                                </svg>
+                                View Full Day Overview
+                            </button>
                         )}
                     </div>
                 ) : (

@@ -11,6 +11,7 @@ interface Props {
     selectedDate?: Date | null;
     onMonthChange: (d: Date) => void;
     onSelectDate: (date: Date, reminders: Reminder[]) => void;
+    onSelectOverview?: (date: Date) => void;
 }
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -22,6 +23,7 @@ export default function ReminderCalendar({
     selectedDate,
     onMonthChange,
     onSelectDate,
+    onSelectOverview,
 }: Props) {
     const year = month.getFullYear();
     const monthIndex = month.getMonth();
@@ -113,6 +115,7 @@ export default function ReminderCalendar({
                                             onSelectDate(date, dayReminders);
                                         }
                                     }}
+                                    onOverview={onSelectOverview ? () => onSelectOverview(date) : undefined}
                                 />
                             );
                         })}

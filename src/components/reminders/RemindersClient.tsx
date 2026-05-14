@@ -7,6 +7,7 @@ import type { Reminder } from "@/types/reminder";
 import ReminderCalendar from "@/components/reminders/ReminderCalendar";
 import ReminderModal from "@/components/reminders/ReminderModal";
 import ReminderSidePanel from "@/components/reminders/ReminderSidePanel";
+import DailyOverviewModal from "@/components/shared/DailyOverviewModal";
 import { isExpired } from "@/utils/reminder";
 
 type PanelMode = "upcoming" | "day";
@@ -24,6 +25,9 @@ export default function RemindersClient() {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<ModalMode>("create");
     const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+
+    const [overviewOpen, setOverviewOpen] = useState(false);
+    const [overviewDate, setOverviewDate] = useState<Date | null>(null);
 
     const normalizeDate = (value: Date | string) => {
         const d = new Date(value);
@@ -188,6 +192,10 @@ export default function RemindersClient() {
                             setSelectedReminders(dayReminders);
                             setPanelMode("day");
                         }}
+                        onSelectOverview={(date) => {
+                            setOverviewDate(date);
+                            setOverviewOpen(true);
+                        }}
                     />
                 </div>
 
@@ -208,6 +216,12 @@ export default function RemindersClient() {
                             setSelectedDate(null);
                             setSelectedReminders([]);
                         }}
+                        onViewOverview={() => {
+                            if (selectedDate) {
+                                setOverviewDate(selectedDate);
+                                setOverviewOpen(true);
+                            }
+                        }}
                     />
                 </div>
             </div>
@@ -227,6 +241,17 @@ export default function RemindersClient() {
                         await loadReminders();
                         setModalOpen(false);
                         setEditingReminder(null);
+                    }}
+                />
+            )}
+
+            {overviewOpen && (
+                <DailyOverviewModal
+                    open={overviewOpen}
+                    date={overviewDate}
+                    onClose={() => {
+                        setOverviewOpen(false);
+                        setOverviewDate(null);
                     }}
                 />
             )}

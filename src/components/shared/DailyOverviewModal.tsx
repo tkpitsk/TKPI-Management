@@ -1,0 +1,270 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import api from "@/lib/api";
+import { 
+  X, 
+  Search, 
+  Calendar, 
+  CheckCircle2, 
+  XCircle, 
+  Clock3, 
+  User, 
+  Bell, 
+  Wallet,
+  Loader2
+} from "lucide-react";
+
+interface DailyData {
+  date: string;
+  attendance: any[];
+  advances: any[];
+  reminders: any[];
+}
+
+export default function DailyOverviewModal({
+  open,
+  date,
+  onClose,
+}: {
+  open: boolean;
+  date: Date | null;
+  onClose: () => void;
+}) {
+  const [data, setData] = useState<DailyData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (open && date) {
+      fetchOverview();
+    }
+  }, [open, date]);
+
+  const fetchOverview = async () => {
+    if (!date) return;
+    try {
+      setLoading(true);
+      const { data } = await api.get(`/daily-overview?date=${date.toISOString()}`);
+      setData(data);
+    } catch (error) {
+      console.error("Failed to fetch daily overview:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open || !date) return null;
+
+  const formattedDate = date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  const filteredAttendance = data?.attendance.filter((a) =>
+    a.employee?.name?.toLowerCase().includes(search.toLowerCase()) ||
+    a.employee?.userId?.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const filteredReminders = data?.reminders.filter((r) =>
+    r.title.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+      <div 
+        className="w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden rounded-[32px] border border-border bg-surface shadow-[0_24px_80px_rgba(15,23,42,0.18)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* HEADER */}
+        <div className="border-b border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(248,248,248,0.94)_100%)] px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-primary">
+                <Calendar size={14} />
+                Daily Overview
+              </div>
+              <h3 className="mt-2 text-2xl font-semibold text-text">
+                Activity for {formattedDate}
+              </h3>
+              <p className="mt-1 text-sm text-text-muted">
+                Consolidated view of attendance, advances, and reminders.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+               <button
+                onClick={onClose}
+                className="rounded-xl border border-border bg-white p-2 text-text transition hover:bg-muted"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+              <input
+                placeholder="Search employee or reminder..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-11 w-full rounded-2xl border border-border bg-white pl-10 pr-4 text-sm outline-none transition focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* CONTENT */}
+        <div className="flex-1 overflow-y-auto bg-muted/20 p-6">
+          {loading ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-text-muted">
+              <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+              <p className="text-sm font-medium">Fetching daily records...</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {/* ATTENDANCE SECTION */}
+              <section>
+                <div className="mb-4 flex items-center justify-between">
+                  <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-text">
+                    <User size={16} className="text-brand-primary" />
+                    Attendance ({filteredAttendance.length})
+                  </h4>
+                </div>
+
+                {filteredAttendance.length > 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {filteredAttendance.map((record) => (
+                      <AttendanceCard key={record._id} record={record} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No attendance records found for this date." />
+                )}
+              </section>
+
+              {/* REMINDERS SECTION */}
+              <section>
+                <div className="mb-4">
+                  <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-text">
+                    <Bell size={16} className="text-brand-primary" />
+                    Reminders ({filteredReminders.length})
+                  </h4>
+                </div>
+
+                {filteredReminders.length > 0 ? (
+                  <div className="grid gap-3">
+                    {filteredReminders.map((reminder) => (
+                      <ReminderCard key={reminder._id} reminder={reminder} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No reminders scheduled for this date." />
+                )}
+              </section>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AttendanceCard({ record }: { record: any }) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "present": return <CheckCircle2 className="text-emerald-500" size={16} />;
+      case "absent": return <XCircle className="text-red-500" size={16} />;
+      case "half-day": return <Clock3 className="text-amber-500" size={16} />;
+      default: return null;
+    }
+  };
+
+  const statusStyles = {
+    present: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    absent: "bg-red-50 text-red-700 border-red-200",
+    "half-day": "bg-amber-50 text-amber-700 border-amber-200",
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:shadow-md">
+      <div className="flex items-center gap-3">
+        {record.employee?.image ? (
+          <img 
+            src={record.employee.image} 
+            alt={record.employee.name} 
+            className="h-10 w-10 rounded-xl object-cover border border-border" 
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary font-bold border border-brand-primary/20">
+            {record.employee?.name?.charAt(0)}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-semibold text-text">
+            {record.employee?.name}
+          </p>
+          <p className="text-[11px] text-text-muted">
+             {record.employee?.userId || "ID: " + record.employee?._id.slice(-6)}
+          </p>
+        </div>
+        <div className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight ${statusStyles[record.status as keyof typeof statusStyles]}`}>
+          {getStatusIcon(record.status)}
+          {record.status}
+        </div>
+      </div>
+      
+      <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
+        <p className="text-[10px] font-medium text-text-muted italic">
+          Marked by {record.markedBy?.name || "System"}
+        </p>
+        {record.reason && (
+          <p className="max-w-[150px] truncate text-[10px] text-text-muted" title={record.reason}>
+            "{record.reason}"
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReminderCard({ reminder }: { reminder: any }) {
+  return (
+    <div className="rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:shadow-md">
+      <div className="flex items-start gap-3">
+        <div className="mt-1 rounded-xl bg-brand-primary/10 p-2 text-brand-primary">
+          <Bell size={18} />
+        </div>
+        <div className="flex-1">
+          <h5 className="text-sm font-semibold text-text">{reminder.title}</h5>
+          {reminder.description && (
+            <p className="mt-1 text-xs text-text-muted leading-relaxed">
+              {reminder.description}
+            </p>
+          )}
+          <div className="mt-3 flex items-center justify-between">
+            <p className="text-[10px] font-medium text-text-muted italic">
+              Created by {reminder.createdBy?.name || "Admin"}
+            </p>
+            {reminder.time && (
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-brand-primary bg-brand-primary/5 px-2 py-0.5 rounded-full">
+                <Clock3 size={10} />
+                {reminder.time}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border bg-white/50 px-6 py-10 text-center">
+      <p className="text-sm text-text-muted">{message}</p>
+    </div>
+  );
+}

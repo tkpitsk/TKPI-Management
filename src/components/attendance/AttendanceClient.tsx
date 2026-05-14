@@ -6,6 +6,7 @@ import AttendanceCalendar from "@/components/attendance/AttendanceCalendar";
 import AttendanceSidePanel from "@/components/attendance/AttendanceSidePanel";
 import AttendanceModal from "@/components/attendance/AttendanceModal";
 import BulkAttendanceModal from "@/components/attendance/BulkAttendanceModal";
+import DailyOverviewModal from "@/components/shared/DailyOverviewModal";
 import SearchableEmployeeSelect from "@/components/ui/SearchableEmployeeSelect";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
@@ -42,6 +43,8 @@ export default function AttendanceClient() {
     const [panelMode, setPanelMode] = useState<PanelMode>("summary");
     const [modalOpen, setModalOpen] = useState(false);
     const [bulkModalOpen, setBulkModalOpen] = useState(false);
+    const [overviewOpen, setOverviewOpen] = useState(false);
+    const [overviewDate, setOverviewDate] = useState<Date | null>(null);
 
     const normalizeDate = (value: Date | string) => {
         const d = new Date(value);
@@ -261,6 +264,10 @@ export default function AttendanceClient() {
                             setSelectedRecord(record);
                             setPanelMode("day");
                         }}
+                        onSelectOverview={(date) => {
+                            setOverviewDate(date);
+                            setOverviewOpen(true);
+                        }}
                     />
                 </div>
 
@@ -281,6 +288,12 @@ export default function AttendanceClient() {
                             setSelectedDate(null);
                             setSelectedRecord(null);
                             setPanelMode("summary");
+                        }}
+                        onViewOverview={() => {
+                            if (selectedDate) {
+                                setOverviewDate(selectedDate);
+                                setOverviewOpen(true);
+                            }
                         }}
                     />
                 </div>
@@ -310,6 +323,17 @@ export default function AttendanceClient() {
                     setBulkModalOpen(false);
                 }}
             />
+
+            {overviewOpen && (
+                <DailyOverviewModal
+                    open={overviewOpen}
+                    date={overviewDate}
+                    onClose={() => {
+                        setOverviewOpen(false);
+                        setOverviewDate(null);
+                    }}
+                />
+            )}
         </div>
     );
 }

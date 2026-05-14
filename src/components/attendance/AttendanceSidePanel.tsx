@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 interface Stats {
     present: number;
     absent: number;
@@ -17,6 +19,7 @@ export default function AttendanceSidePanel({
     stats,
     onOpenCreate,
     onBack,
+    onViewOverview,
 }: {
     loading: boolean;
     mode: "summary" | "day";
@@ -31,6 +34,7 @@ export default function AttendanceSidePanel({
     stats: Stats;
     onOpenCreate: () => void;
     onBack: () => void;
+    onViewOverview?: () => void;
 }) {
     const statusTone =
         selectedRecord?.status === "present"
@@ -51,7 +55,7 @@ export default function AttendanceSidePanel({
                         </p>
                         <div className="flex items-center gap-3">
                             {!loading && mode === "summary" && employeeImage && (
-                                <img
+                                <Image
                                     src={employeeImage}
                                     alt={employeeName}
                                     className="h-10 w-10 rounded-xl object-cover border border-border shadow-sm"
@@ -96,6 +100,28 @@ export default function AttendanceSidePanel({
                         >
                             {selectedRecord ? "Update attendance" : "Mark attendance"}
                         </button>
+
+                        {onViewOverview && (
+                            <button
+                                onClick={onViewOverview}
+                                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-brand-primary/20 bg-brand-primary/5 px-4 py-3 text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+                                </svg>
+                                View Full Day Overview
+                            </button>
+                        )}
 
                         <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
                             <div className="flex items-center justify-between gap-3">
