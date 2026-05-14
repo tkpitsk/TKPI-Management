@@ -69,8 +69,8 @@ export default function AttendanceDayCell({
         </span>
 
         {onOverview && (
-          <button
-            type="button"
+          <div
+            role="button"
             onClick={(e) => {
               e.stopPropagation();
               onOverview(e);
@@ -91,7 +91,7 @@ export default function AttendanceDayCell({
             >
               <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
             </svg>
-          </button>
+          </div>
         )}
       </div>
 

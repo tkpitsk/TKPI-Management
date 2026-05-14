@@ -81,6 +81,18 @@ export default function DailyOverviewModal({
     r.title.toLowerCase().includes(search.toLowerCase())
   ) || [];
 
+  const filteredAdvances = data?.advances.filter((a) => {
+    const name = a.employee?.name?.toLowerCase() || "";
+    const userId = a.employee?.userId?.toLowerCase() || "";
+    const role = a.employee?.role || "";
+    const searchTerm = search.toLowerCase();
+    
+    const matchesSearch = name.includes(searchTerm) || userId.includes(searchTerm);
+    const matchesRole = roleFilter === "all" || role === roleFilter;
+    
+    return matchesSearch && matchesRole;
+  }) || [];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
       <div 
@@ -176,6 +188,25 @@ export default function DailyOverviewModal({
                   <EmptyState message="No attendance records found for this date." />
                 )}
               </section>
+              {/* ADVANCES SECTION */}
+              <section>
+                <div className="mb-4">
+                  <h4 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-text">
+                    <Wallet size={16} className="text-brand-primary" />
+                    Advances ({filteredAdvances.length})
+                  </h4>
+                </div>
+
+                {filteredAdvances.length > 0 ? (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {filteredAdvances.map((advance) => (
+                      <AdvanceCard key={advance._id} advance={advance} />
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState message="No advance records found for this date." />
+                )}
+              </section>
 
               {/* REMINDERS SECTION */}
               <section>
@@ -255,6 +286,53 @@ function AttendanceCard({ record }: { record: any }) {
         {record.reason && (
           <p className="max-w-[150px] truncate text-[10px] text-text-muted" title={record.reason}>
             "{record.reason}"
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdvanceCard({ advance }: { advance: any }) {
+  return (
+    <div className="rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:shadow-md border-l-4 border-l-brand-primary">
+      <div className="flex items-center gap-3">
+        {advance.employee?.image ? (
+          <img 
+            src={advance.employee.image} 
+            alt={advance.employee.name} 
+            className="h-10 w-10 rounded-xl object-cover border border-border" 
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary font-bold border border-brand-primary/20">
+            {advance.employee?.name?.charAt(0)}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-semibold text-text">
+            {advance.employee?.name}
+          </p>
+          <p className="text-[11px] text-text-muted">
+             {advance.employee?.userId || "ID: " + advance.employee?._id.slice(-6)}
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-sm font-bold text-brand-primary">
+            ₹{advance.amount.toLocaleString("en-IN")}
+          </p>
+          <p className="text-[10px] text-text-muted uppercase font-bold tracking-tighter">
+            Advance
+          </p>
+        </div>
+      </div>
+      
+      <div className="mt-4 flex items-center justify-between border-t border-border/50 pt-3">
+        <p className="text-[10px] font-medium text-text-muted italic">
+          Given by {advance.givenBy?.name || "System"}
+        </p>
+        {advance.note && (
+          <p className="max-w-[150px] truncate text-[10px] text-text-muted" title={advance.note}>
+            "{advance.note}"
           </p>
         )}
       </div>
