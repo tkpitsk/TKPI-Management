@@ -12,7 +12,8 @@ import {
   User, 
   Bell, 
   Wallet,
-  Loader2
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 
 interface DailyData {
@@ -231,25 +232,57 @@ function AttendanceCard({ record }: { record: any }) {
 }
 
 function ReminderCard({ reminder }: { reminder: any }) {
+  const priorityStyles = {
+    high: "bg-red-50 text-red-700 border-red-200",
+    medium: "bg-amber-50 text-amber-700 border-amber-200",
+    low: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  };
+
   return (
-    <div className="rounded-2xl border border-border bg-white p-4 shadow-sm transition hover:shadow-md">
+    <div className={`rounded-2xl border bg-white p-4 shadow-sm transition hover:shadow-md ${priorityStyles[reminder.priority as keyof typeof priorityStyles] || 'border-border'}`}>
       <div className="flex items-start gap-3">
-        <div className="mt-1 rounded-xl bg-brand-primary/10 p-2 text-brand-primary">
-          <Bell size={18} />
+        <div className={`mt-1 rounded-xl p-2 ${
+          reminder.priority === 'high' 
+            ? 'bg-red-100 text-red-600' 
+            : reminder.priority === 'medium'
+            ? 'bg-amber-100 text-amber-600'
+            : 'bg-emerald-100 text-emerald-600'
+        }`}>
+          <AlertCircle size={18} />
         </div>
         <div className="flex-1">
-          <h5 className="text-sm font-semibold text-text">{reminder.title}</h5>
+          <div className="flex items-center justify-between gap-2">
+            <h5 className="text-sm font-semibold text-text">{reminder.title}</h5>
+            <span className="text-[10px] font-bold uppercase tracking-tight opacity-70">
+              {reminder.priority} Priority
+            </span>
+          </div>
+          
           {reminder.description && (
             <p className="mt-1 text-xs text-text-muted leading-relaxed">
               {reminder.description}
             </p>
           )}
-          <div className="mt-3 flex items-center justify-between">
+
+          {reminder.assignedTo && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-lg bg-white/50 px-2 py-1 text-[10px] font-semibold text-brand-primary border border-brand-primary/10">
+              <User size={10} />
+              Assigned to: {reminder.assignedTo}
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center justify-between border-t border-black/5 pt-3">
             <p className="text-[10px] font-medium text-text-muted italic">
               Created by {reminder.createdBy?.name || "Admin"}
+              {reminder.repeat !== 'none' && (
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-black/5 px-1.5 py-0.5 not-italic">
+                  <Clock3 size={8} />
+                  {reminder.repeat === 'custom' ? `${reminder.customDays}d` : reminder.repeat}
+                </span>
+              )}
             </p>
             {reminder.time && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-brand-primary bg-brand-primary/5 px-2 py-0.5 rounded-full">
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-brand-primary bg-white px-2 py-0.5 rounded-full shadow-sm border border-brand-primary/5">
                 <Clock3 size={10} />
                 {reminder.time}
               </span>

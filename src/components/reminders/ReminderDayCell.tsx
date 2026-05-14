@@ -96,9 +96,26 @@ export default function ReminderDayCell({
                 {hasReminders ? (
                     <div className="flex h-full flex-col justify-between">
                         <div className="min-h-0">
-                            <p className="truncate text-[11px] font-semibold leading-4 text-text">
-                                {firstReminder.title}
-                            </p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span 
+                                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                        firstReminder.priority === 'high' 
+                                            ? 'bg-red-500' 
+                                            : firstReminder.priority === 'medium'
+                                            ? 'bg-amber-500'
+                                            : 'bg-emerald-500'
+                                    }`} 
+                                />
+                                <p className="truncate text-[11px] font-semibold leading-4 text-text">
+                                    {firstReminder.title}
+                                </p>
+                            </div>
+
+                            {firstReminder.assignedTo && (
+                                <p className="mt-0.5 truncate text-[10px] font-medium text-brand-primary">
+                                    @ {firstReminder.assignedTo}
+                                </p>
+                            )}
 
                             {moreCount > 0 ? (
                                 <p className="mt-1 text-[10px] font-medium text-text-muted">
