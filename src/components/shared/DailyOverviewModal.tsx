@@ -63,10 +63,12 @@ export default function DailyOverviewModal({
     year: "numeric",
   });
 
-  const filteredAttendance = data?.attendance.filter((a) =>
-    a.employee?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    a.employee?.userId?.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const filteredAttendance = data?.attendance.filter((a) => {
+    const name = a.employee?.name?.toLowerCase() || "";
+    const userId = a.employee?.userId?.toLowerCase() || "";
+    const searchTerm = search.toLowerCase();
+    return name.includes(searchTerm) || userId.includes(searchTerm);
+  }) || [];
 
   const filteredReminders = data?.reminders.filter((r) =>
     r.title.toLowerCase().includes(search.toLowerCase())

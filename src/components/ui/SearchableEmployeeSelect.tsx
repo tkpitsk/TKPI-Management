@@ -199,10 +199,13 @@ export default function SearchableEmployeeSelect({
                                                 {item.name}
                                             </p>
                                             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                                                <span className="rounded-full bg-brand-primary/10 px-2 py-0.5 text-brand-primary font-bold uppercase tracking-tighter text-[9px]">
+                                                    {(item as any).role || "employee"}
+                                                </span>
                                                 <span className="rounded-full bg-black/5 px-2 py-0.5">
                                                     {item.userId || "No user ID"}
                                                 </span>
-                                                <span className="truncate">Ref: {item._id}</span>
+                                                <span className="truncate">Ref: {item._id.slice(-6)}</span>
                                             </div>
                                         </div>
 

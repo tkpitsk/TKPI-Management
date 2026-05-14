@@ -69,9 +69,13 @@ export default function AttendanceClient() {
     useEffect(() => {
         async function loadEmployees() {
             try {
-                const { data } = await api.get("/users?role=employee");
-                setEmployees(data || []);
-                if (data?.length && !employeeId) setEmployeeId(data[0]._id);
+                // Fetch all active users and filter for employee/worker roles
+                const { data } = await api.get("/users");
+                const filtered = (data || []).filter((u: any) => 
+                    ["employee", "worker"].includes(u.role) && u.isActive
+                );
+                setEmployees(filtered);
+                if (filtered.length && !employeeId) setEmployeeId(filtered[0]._id);
             } catch (error) {
                 console.error("Failed to load employees", error);
             }
