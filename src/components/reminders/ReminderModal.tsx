@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import type { Reminder } from "@/types/reminder";
 import { isPastDate } from "@/utils/date";
-import { Pencil, Trash2, X, Search, User as UserIcon, Loader2, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, X, User as UserIcon, Loader2, ChevronDown } from "lucide-react";
 
 interface Props {
     open: boolean;
@@ -225,10 +225,10 @@ export default function ReminderModal({
                                 {showUserList && (
                                     <>
                                         <div 
-                                            className="fixed inset-0 z-[60]" 
+                                            className="fixed inset-0 z-60" 
                                             onClick={() => setShowUserList(false)}
                                         />
-                                        <div className="absolute left-0 right-0 top-full z-[70] mt-2 max-h-60 overflow-y-auto rounded-2xl border border-border bg-white py-2 shadow-xl animate-in fade-in slide-in-from-top-2">
+                                        <div className="absolute left-0 right-0 top-full z-70 mt-2 max-h-60 overflow-y-auto rounded-2xl border border-border bg-white py-2 shadow-xl animate-in fade-in slide-in-from-top-2">
                                             {filteredUsers.length > 0 ? (
                                                 <div className="px-2 pb-2 border-b border-border mb-1">
                                                     <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-text-muted">
@@ -272,7 +272,7 @@ export default function ReminderModal({
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="truncate text-sm font-medium text-text">
-                                                            Use custom: "{assignedTo}"
+                                                            Use custom: &quot;{assignedTo}&quot;
                                                         </p>
                                                         <p className="truncate text-[10px] text-text-muted">
                                                             Manually entered name
@@ -291,7 +291,7 @@ export default function ReminderModal({
                                 )}
                             </div>
                         </div>
-                        
+
                         <div>
                             <label className="mb-2 block text-sm font-medium text-text">
                                 Title
