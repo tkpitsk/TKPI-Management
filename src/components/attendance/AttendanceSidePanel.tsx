@@ -6,6 +6,7 @@ interface Stats {
     halfDay: number;
     payableDays: number;
     totalAdvance: number;
+    totalDeduction?: number;
 }
 
 export default function AttendanceSidePanel({
@@ -28,6 +29,7 @@ export default function AttendanceSidePanel({
     selectedRecord: {
         status: "present" | "absent" | "half-day";
         advance: number;
+        deduction?: number;
     } | null;
     employeeName: string;
     employeeImage?: string;
@@ -150,16 +152,24 @@ export default function AttendanceSidePanel({
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
-                            <p className="text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
-                                Advance amount
-                            </p>
-                            <p className="mt-2 text-xl font-semibold tabular-nums text-text">
-                                ₹{Math.round(Number(selectedRecord?.advance || 0)).toLocaleString("en-IN")}
-                            </p>
-                            <p className="mt-1 text-xs text-text-muted">
-                                Recorded for the selected date
-                            </p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                                <p className="text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
+                                    Advance Given
+                                </p>
+                                <p className="mt-2 text-base font-bold tabular-nums text-emerald-600">
+                                    ₹{Math.round(Number(selectedRecord?.advance || 0)).toLocaleString("en-IN")}
+                                </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+                                <p className="text-xs font-medium uppercase tracking-[0.14em] text-text-muted">
+                                    Repaid/Deducted
+                                </p>
+                                <p className="mt-2 text-base font-bold tabular-nums text-amber-600">
+                                    ₹{Math.round(Number(selectedRecord?.deduction || 0)).toLocaleString("en-IN")}
+                                </p>
+                            </div>
                         </div>
 
                         {!selectedRecord && (
@@ -178,8 +188,13 @@ export default function AttendanceSidePanel({
                         <SummaryItem label="Half days" value={stats.halfDay} tone="warning" />
                         <SummaryItem label="Payable days" value={stats.payableDays} />
                         <SummaryItem
-                            label="Total advance"
+                            label="Total advance given"
                             value={`₹${Math.round(stats.totalAdvance).toLocaleString("en-IN")}`}
+                        />
+                        <SummaryItem
+                            label="Total repaid/deducted"
+                            value={`₹${Math.round(stats.totalDeduction || 0).toLocaleString("en-IN")}`}
+                            tone="warning"
                         />
                     </div>
                 )}

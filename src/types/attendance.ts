@@ -6,6 +6,7 @@ export interface AttendanceRecord {
     date: string;
     status: AttendanceStatus;
     advance: number;
+    deduction?: number;
 }
 
 export interface AttendanceSummary {
@@ -15,6 +16,7 @@ export interface AttendanceSummary {
     halfDay: number;
     payableDays: number;
     totalAdvance: number;
+    totalDeduction?: number;
 }
 
 export interface EmployeeMini {
@@ -33,6 +35,7 @@ export interface SalaryBreakdown {
     halfDay: number;
     payableDays: number;
     totalAdvance: number;
+    totalDeduction?: number;
     grossSalary?: number;
     netSalary?: number;
     salaryAmount?: number;

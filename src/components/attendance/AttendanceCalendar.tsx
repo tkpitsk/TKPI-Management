@@ -6,6 +6,7 @@ interface AttendanceRecord {
     date: string;
     status: "present" | "absent" | "half-day";
     advance: number;
+    deduction?: number;
 }
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

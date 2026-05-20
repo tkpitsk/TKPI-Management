@@ -10,6 +10,7 @@ export default function AttendanceDayCell({
   record: {
     status: "present" | "absent" | "half-day";
     advance: number;
+    deduction?: number;
   } | null;
   isSelected?: boolean;
   isToday?: boolean;
@@ -18,6 +19,7 @@ export default function AttendanceDayCell({
 }) {
   const status = record?.status;
   const advance = Number(record?.advance || 0);
+  const deduction = Number(record?.deduction || 0);
 
   const stateClass = isSelected
     ? "border-brand-primary bg-brand-primary/5 ring-2 ring-brand-primary/15 shadow-sm"
@@ -103,12 +105,17 @@ export default function AttendanceDayCell({
           </span>
         </div>
 
-        <div className="flex items-center">
-          {advance > 0 ? (
-            <span className="inline-flex max-w-full shrink-0 items-center rounded-full bg-black/5 px-2 py-1 text-[10px] font-semibold text-text">
-              ₹{advance.toLocaleString("en-IN")}
+        <div className="flex flex-col items-end gap-1 select-none">
+          {advance > 0 && (
+            <span className="inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 border border-emerald-100">
+              +{Math.round(advance).toLocaleString("en-IN")}
             </span>
-          ) : null}
+          )}
+          {deduction > 0 && (
+            <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 border border-amber-100">
+              -{Math.round(deduction).toLocaleString("en-IN")}
+            </span>
+          )}
         </div>
       </div>
     </div>

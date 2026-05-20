@@ -28,7 +28,9 @@ export default function BulkAttendanceModal({
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [status, setStatus] = useState<AttendanceStatus>("present");
     const [advance, setAdvance] = useState("");
+    const [deduction, setDeduction] = useState("");
     const [individualAdvances, setIndividualAdvances] = useState<Record<string, string>>({});
+    const [individualDeductions, setIndividualDeductions] = useState<Record<string, string>>({});
     const [reason, setReason] = useState("");
     
     // Date Range State
@@ -47,7 +49,9 @@ export default function BulkAttendanceModal({
         // Reset states on modal open
         setSelectedIds(new Set());
         setIndividualAdvances({});
+        setIndividualDeductions({});
         setAdvance("");
+        setDeduction("");
         setReason("");
 
         async function loadEmployees() {
@@ -100,6 +104,19 @@ export default function BulkAttendanceModal({
         return Math.round(sum * daysCount);
     }, [selectedIds, individualAdvances, advance, daysCount]);
 
+    const totalDeductionSum = useMemo(() => {
+        let sum = 0;
+        selectedIds.forEach((id) => {
+            const indVal = individualDeductions[id];
+            if (indVal !== undefined && indVal !== "") {
+                sum += Number(indVal);
+            } else {
+                sum += Number(deduction || 0);
+            }
+        });
+        return Math.round(sum * daysCount);
+    }, [selectedIds, individualDeductions, deduction, daysCount]);
+
     const toggleEmployee = (id: string) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
@@ -136,6 +153,14 @@ export default function BulkAttendanceModal({
             }
         });
 
+        // Prepare per-employee deductions mapping
+        const employeeDeductions: Record<string, number> = {};
+        selectedIds.forEach((id) => {
+            if (individualDeductions[id] !== undefined && individualDeductions[id] !== "") {
+                employeeDeductions[id] = Number(individualDeductions[id]);
+            }
+        });
+
         setSaving(true);
         try {
             await api.post("/attendance/bulk", {
@@ -144,8 +169,10 @@ export default function BulkAttendanceModal({
                 endDate: isRange ? endDate : undefined,
                 status,
                 advance: Number(advance || 0),
+                deduction: Number(deduction || 0),
                 reason,
                 employeeAdvances,
+                employeeDeductions,
             });
             await onSaved();
             onClose();
@@ -290,10 +317,10 @@ export default function BulkAttendanceModal({
                                                 </div>
                                             </div>
 
-                                            {/* Employee-specific Daily Advance Input */}
-                                            <div className="mt-3" onClick={(evt) => evt.stopPropagation()}>
+                                            {/* Employee-specific Daily Advance & Deduction Inputs */}
+                                            <div className="mt-3 grid grid-cols-2 gap-2" onClick={(evt) => evt.stopPropagation()}>
                                                 <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-brand-primary uppercase tracking-widest">₹ Adv</span>
+                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-brand-primary uppercase tracking-wider">Adv</span>
                                                     <input
                                                         type="number"
                                                         placeholder="0"
@@ -309,8 +336,30 @@ export default function BulkAttendanceModal({
                                                                 toggleEmployee(e._id);
                                                             }
                                                         }}
-                                                        style={{ paddingLeft: "3.25rem" }}
-                                                        className="h-9 w-full rounded-xl border border-border bg-white pr-3 text-xs font-semibold text-text outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10"
+                                                        style={{ paddingLeft: "2.1rem" }}
+                                                        className="h-8.5 w-full rounded-xl border border-border bg-white pr-2.5 text-[11px] font-semibold text-text outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10"
+                                                    />
+                                                </div>
+
+                                                <div className="relative">
+                                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[8px] font-bold text-amber-600 uppercase tracking-wider">Ded</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={individualDeductions[e._id] || ""}
+                                                        onChange={(evt) => {
+                                                            const val = evt.target.value;
+                                                            setIndividualDeductions(prev => ({
+                                                                ...prev,
+                                                                [e._id]: val
+                                                            }));
+                                                            // Auto-select the employee if they enter a custom deduction amount
+                                                            if (val !== "" && Number(val) >= 0 && !selectedIds.has(e._id)) {
+                                                                toggleEmployee(e._id);
+                                                            }
+                                                        }}
+                                                        style={{ paddingLeft: "2.1rem" }}
+                                                        className="h-8.5 w-full rounded-xl border border-border bg-white pr-2.5 text-[11px] font-semibold text-text outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
                                                     />
                                                 </div>
                                             </div>
@@ -398,28 +447,46 @@ export default function BulkAttendanceModal({
                                 </div>
                             </div>
 
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold text-text">Daily Advance</label>
-                                    <span className="text-[10px] font-bold text-brand-primary uppercase tracking-wider">Per Day / Per Person</span>
-                                </div>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-text-muted">₹</span>
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        value={advance}
-                                        onChange={e => setAdvance(e.target.value)}
-                                        className="h-12 w-full rounded-2xl border border-border bg-white pl-9 pr-4 text-sm outline-none transition focus:border-brand-primary"
-                                    />
-                                </div>
-                                {isRange && (
-                                    <div className="flex items-start gap-2 rounded-xl bg-brand-primary/5 p-3 text-[11px] text-brand-primary border border-brand-primary/10">
-                                        <AlertCircle size={14} className="shrink-0 mt-0.5" />
-                                        <p>Advance will be applied to <strong>each</strong> of the {daysCount} days selected.</p>
+                            <div className="grid grid-cols-2 gap-3.5">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-bold text-text">Daily Advance</label>
                                     </div>
-                                )}
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-text-muted">₹</span>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={advance}
+                                            onChange={e => setAdvance(e.target.value)}
+                                            className="h-12 w-full rounded-2xl border border-border bg-white pl-9 pr-4 text-sm outline-none transition focus:border-brand-primary"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-sm font-bold text-text">Daily Deduction</label>
+                                    </div>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-text-muted">₹</span>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={deduction}
+                                            onChange={e => setDeduction(e.target.value)}
+                                            className="h-12 w-full rounded-2xl border border-border bg-white pl-9 pr-4 text-sm outline-none transition focus:border-brand-primary"
+                                        />
+                                    </div>
+                                </div>
                             </div>
+
+                            {isRange && (
+                                <div className="flex items-start gap-2 rounded-xl bg-brand-primary/5 p-3 text-[11px] text-brand-primary border border-brand-primary/10">
+                                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                                    <p>Default values will be applied to <strong>each</strong> of the {daysCount} days selected.</p>
+                                </div>
+                            )}
 
                             {(status === "absent" || status === "half-day") && (
                                 <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -453,12 +520,14 @@ export default function BulkAttendanceModal({
                                         <span className="text-text-muted font-medium italic">Total Operations</span>
                                         <span className="font-bold text-brand-primary">{selectedIds.size * daysCount} Records</span>
                                     </div>
-                                    {totalAdvanceSum > 0 && (
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-text-muted">Total Advance</span>
-                                            <span className="font-bold text-amber-600">₹{totalAdvanceSum.toLocaleString("en-IN")}</span>
-                                        </div>
-                                    )}
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-text-muted font-medium text-emerald-600">Total Advance Given</span>
+                                        <span className="font-bold text-emerald-600">₹{totalAdvanceSum.toLocaleString("en-IN")}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-text-muted font-medium text-amber-600">Total Repaid/Deducted</span>
+                                        <span className="font-bold text-amber-600">₹{totalDeductionSum.toLocaleString("en-IN")}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>

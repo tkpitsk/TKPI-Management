@@ -25,6 +25,7 @@ export default function AttendanceModal({
     record: {
         status: AttendanceStatus;
         advance: number;
+        deduction?: number;
         reason?: string;
     } | null;
     onClose: () => void;
@@ -32,12 +33,14 @@ export default function AttendanceModal({
 }) {
     const [status, setStatus] = useState<AttendanceStatus>("present");
     const [advance, setAdvance] = useState("");
+    const [deduction, setDeduction] = useState("");
     const [reason, setReason] = useState("");
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         setStatus(record?.status || "present");
         setAdvance(record?.advance ? String(record.advance) : "");
+        setDeduction(record?.deduction ? String(record.deduction) : "");
         setReason(record?.reason || "");
     }, [record, open]);
 
@@ -70,6 +73,7 @@ export default function AttendanceModal({
                 date: formatLocalISO(date),
                 status,
                 advance: Number(advance || 0),
+                deduction: Number(deduction || 0),
                 reason,
             });
             await onSaved();
@@ -197,28 +201,54 @@ export default function AttendanceModal({
                             </div>
                         </div>
 
-                        <div>
-                            <label className="mb-3 block text-sm font-semibold text-text">
-                                Advance amount
-                            </label>
+                        <div className="grid gap-6 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-3 block text-sm font-semibold text-text">
+                                    Advance Money Given
+                                </label>
 
-                            <div className="relative">
-                                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">
-                                    ₹
-                                </span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={advance}
-                                    onChange={(e) => setAdvance(e.target.value)}
-                                    placeholder="0"
-                                    className="h-13 w-full rounded-2xl border border-border bg-white pl-9 pr-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
-                                />
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">
+                                        ₹
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={advance}
+                                        onChange={(e) => setAdvance(e.target.value)}
+                                        placeholder="0"
+                                        className="h-13 w-full rounded-2xl border border-border bg-white pl-9 pr-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                    />
+                                </div>
+
+                                <p className="mt-2 text-xs text-text-muted">
+                                    If worker borrowed money on this day.
+                                </p>
                             </div>
 
-                            <p className="mt-2 text-xs text-text-muted">
-                                Leave blank or keep 0 if no advance was given for this day.
-                            </p>
+                            <div>
+                                <label className="mb-3 block text-sm font-semibold text-text">
+                                    Advance Repaid / Deducted
+                                </label>
+
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">
+                                        ₹
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={deduction}
+                                        onChange={(e) => setDeduction(e.target.value)}
+                                        placeholder="0"
+                                        className="h-13 w-full rounded-2xl border border-border bg-white pl-9 pr-4 text-sm text-text outline-none transition placeholder:text-text-muted focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                    />
+                                </div>
+
+                                <p className="mt-2 text-xs text-text-muted">
+                                    If worker repaid any loan amount from wages or cash.
+                                </p>
+                            </div>
                         </div>
 
                         {(status === "absent" || status === "half-day") && (
@@ -271,9 +301,14 @@ export default function AttendanceModal({
                                         }
                                     />
                                     <SummaryRow
-                                        label="Advance"
+                                        label="Advance Given"
                                         value={`₹${Math.round(Number(advance || 0)).toLocaleString("en-IN")}`}
                                         tone="default"
+                                    />
+                                    <SummaryRow
+                                        label="Repaid / Deducted"
+                                        value={`₹${Math.round(Number(deduction || 0)).toLocaleString("en-IN")}`}
+                                        tone="warning"
                                     />
                                 </div>
                             </div>

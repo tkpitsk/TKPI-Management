@@ -34,6 +34,7 @@ interface DashboardResponse {
         halfDay: number;
         payableDays: number;
         totalAdvance: number;
+        totalDeduction?: number;
     };
     salary: {
         present: number;
@@ -43,6 +44,7 @@ interface DashboardResponse {
         perDay: number;
         earned: number;
         totalAdvance: number;
+        totalDeduction?: number;
         netSalary: number;
     };
     records: AttendanceRecord[];
@@ -438,8 +440,13 @@ export default function EmployeeDetailClient({
                                 tone="success"
                             />
                             <SummaryRow
-                                label="Advance deduction"
+                                label="Advance Taken"
                                 value={loading ? "--" : formatCurrency(salary?.totalAdvance || 0)}
+                                tone="warning"
+                            />
+                            <SummaryRow
+                                label="Advance Repaid"
+                                value={loading ? "--" : formatCurrency(salary?.totalDeduction || 0)}
                                 tone="warning"
                             />
                             <SummaryRow

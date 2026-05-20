@@ -18,6 +18,7 @@ export interface AttendanceRecord {
     date: string;
     status: AttendanceStatus;
     advance: number;
+    deduction?: number;
 }
 
 interface Employee {
@@ -120,6 +121,7 @@ export default function AttendanceClient() {
         let absent = 0;
         let halfDay = 0;
         let totalAdvance = 0;
+        let totalDeduction = 0;
 
         for (const item of records) {
             if (item.status === "present") present++;
@@ -127,6 +129,7 @@ export default function AttendanceClient() {
             else if (item.status === "half-day") halfDay++;
 
             totalAdvance += Number(item.advance || 0);
+            totalDeduction += Number(item.deduction || 0);
         }
 
         return {
@@ -135,6 +138,7 @@ export default function AttendanceClient() {
             halfDay,
             payableDays: present + halfDay * 0.5,
             totalAdvance,
+            totalDeduction,
         };
     }, [records]);
 
@@ -250,7 +254,7 @@ export default function AttendanceClient() {
                     </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                     <StatCard label="Present" value={stats.present} tone="success" />
                     <StatCard label="Absent" value={stats.absent} tone="danger" />
                     <StatCard label="Half day" value={stats.halfDay} tone="warning" />
@@ -258,6 +262,11 @@ export default function AttendanceClient() {
                         label="Total advance"
                         value={`₹${Math.round(stats.totalAdvance).toLocaleString("en-IN")}`}
                         tone="default"
+                    />
+                    <StatCard
+                        label="Total repaid"
+                        value={`₹${Math.round(stats.totalDeduction).toLocaleString("en-IN")}`}
+                        tone="warning"
                     />
                 </div>
             </div>

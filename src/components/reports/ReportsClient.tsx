@@ -34,6 +34,7 @@ interface ReportSummary {
         halfDay: number;
         payableDays: number;
         totalAdvance: number;
+        totalDeduction?: number;
         earned: number;
         netSalary: number;
         rawAttendance?: {
@@ -190,9 +191,10 @@ export default function ReportsClient() {
         return filteredData.reduce((acc, curr) => ({
             earned: acc.earned + curr.summary.earned,
             advance: acc.advance + curr.summary.totalAdvance,
+            deduction: acc.deduction + (curr.summary.totalDeduction || 0),
             net: acc.net + curr.summary.netSalary,
             count: acc.count + 1
-        }), { earned: 0, advance: 0, net: 0, count: 0 });
+        }), { earned: 0, advance: 0, deduction: 0, net: 0, count: 0 });
     }, [filteredData]);
 
     const handlePreview = async (targetId: string | "bulk", name: string) => {
@@ -362,7 +364,7 @@ export default function ReportsClient() {
                 <div className="mt-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                     <SummaryCard label="Headcount" value={totals.count} icon={<Users size={20} />} tone="default" />
                     <SummaryCard label="Gross Earnings" value={`₹${totals.earned.toLocaleString("en-IN")}`} icon={<TrendingUp size={20} />} tone="success" />
-                    <SummaryCard label="Total Deductions" value={`₹${totals.advance.toLocaleString("en-IN")}`} icon={<FileText size={20} />} tone="warning" />
+                    <SummaryCard label="Total Deductions" value={`₹${(totals.advance + totals.deduction).toLocaleString("en-IN")}`} icon={<FileText size={20} />} tone="warning" />
                     <SummaryCard label="Net Distribution" value={`₹${totals.net.toLocaleString("en-IN")}`} icon={<IndianRupee size={20} />} tone="primary" />
                 </div>
             </div>
@@ -392,7 +394,8 @@ export default function ReportsClient() {
                                 <th className="px-6 py-4">Employee</th>
                                 <th className="px-6 py-4 text-center">Attendance</th>
                                 <th className="px-6 py-4 text-right">Earned</th>
-                                <th className="px-6 py-4 text-right">Advance</th>
+                                <th className="px-6 py-4 text-right">Advance Given</th>
+                                <th className="px-6 py-4 text-right">Repaid/Deducted</th>
                                 <th className="px-6 py-4 text-right">Net Payable</th>
                                 <th className="px-6 py-4 text-right">Action</th>
                             </tr>
@@ -401,7 +404,7 @@ export default function ReportsClient() {
                             {loading ? (
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
-                                        <td colSpan={6} className="px-6 py-6"><div className="h-6 rounded bg-muted w-full" /></td>
+                                        <td colSpan={7} className="px-6 py-6"><div className="h-6 rounded bg-muted w-full" /></td>
                                     </tr>
                                 ))
                             ) : filteredData.length > 0 ? (
@@ -478,9 +481,10 @@ export default function ReportsClient() {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right font-medium text-emerald-700">₹{item.summary.earned.toLocaleString("en-IN")}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-amber-700">₹{item.summary.totalAdvance.toLocaleString("en-IN")}</td>
-                                        <td className="px-6 py-4 text-right font-bold text-text">₹{item.summary.netSalary.toLocaleString("en-IN")}</td>
+                                         <td className="px-6 py-4 text-right font-medium text-emerald-700">₹{item.summary.earned.toLocaleString("en-IN")}</td>
+                                         <td className="px-6 py-4 text-right font-medium text-amber-700">₹{item.summary.totalAdvance.toLocaleString("en-IN")}</td>
+                                         <td className="px-6 py-4 text-right font-medium text-indigo-700">₹{(item.summary.totalDeduction || 0).toLocaleString("en-IN")}</td>
+                                         <td className="px-6 py-4 text-right font-bold text-text">₹{item.summary.netSalary.toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-right">
                                             <button
                                                 disabled={loading}
@@ -493,11 +497,11 @@ export default function ReportsClient() {
                                         </td>
                                     </tr>
                                 ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-20 text-center text-text-muted italic">No records found matching your search.</td>
-                                </tr>
-                            )}
+                             ) : (
+                                 <tr>
+                                     <td colSpan={7} className="px-6 py-20 text-center text-text-muted italic">No records found matching your search.</td>
+                                 </tr>
+                             )}
                         </tbody>
                     </table>
                 </div>

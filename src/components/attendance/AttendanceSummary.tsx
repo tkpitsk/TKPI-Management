@@ -25,13 +25,14 @@ export default function AttendanceSummary({
         halfDay: 0,
         payableDays: 0,
         totalAdvance: 0,
+        totalDeduction: 0,
         totalRecords: 0,
     };
 
     if (loading) {
         return (
-            <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
-                {[...Array(5)].map((_, i) => (
+            <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-6">
+                {[...Array(6)].map((_, i) => (
                     <div
                         key={i}
                         className="rounded-[22px] border border-border/70 bg-white p-4 shadow-sm"
@@ -48,7 +49,7 @@ export default function AttendanceSummary({
     }
 
     return (
-        <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-6">
             <Stat
                 label="Present"
                 value={safeSummary.present}
@@ -82,6 +83,13 @@ export default function AttendanceSummary({
                 value={formatCurrency(safeSummary.totalAdvance)}
                 icon={<Coins size={16} />}
                 tone="amber"
+            />
+
+            <Stat
+                label="Advance repaid"
+                value={formatCurrency(safeSummary.totalDeduction || 0)}
+                icon={<Coins size={16} />}
+                tone="yellow"
             />
         </div>
     );

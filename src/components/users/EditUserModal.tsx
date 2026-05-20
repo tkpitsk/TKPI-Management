@@ -530,18 +530,22 @@ export default function EditUserModal({
                                         </div>
 
                                         {salarySummary ? (
-                                            <div className="grid gap-3 sm:grid-cols-3">
+                                            <div className="grid gap-2 sm:grid-cols-4">
                                                 <div className="rounded-xl border border-border bg-white p-3">
                                                     <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Total Advance</p>
-                                                    <p className="mt-1 text-lg font-bold text-amber-600">₹{Math.round(salarySummary.totalAdvance).toLocaleString("en-IN")}</p>
+                                                    <p className="mt-1 text-base font-bold text-amber-600">₹{Math.round(salarySummary.totalAdvance).toLocaleString("en-IN")}</p>
+                                                </div>
+                                                <div className="rounded-xl border border-border bg-white p-3">
+                                                    <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Total Repaid</p>
+                                                    <p className="mt-1 text-base font-bold text-amber-700">₹{Math.round(salarySummary.totalDeduction || 0).toLocaleString("en-IN")}</p>
                                                 </div>
                                                 <div className="rounded-xl border border-border bg-white p-3">
                                                     <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Earned Amount</p>
-                                                    <p className="mt-1 text-lg font-bold text-emerald-600">₹{Math.round(salarySummary.earned).toLocaleString("en-IN")}</p>
+                                                    <p className="mt-1 text-base font-bold text-emerald-600">₹{Math.round(salarySummary.earned).toLocaleString("en-IN")}</p>
                                                 </div>
                                                 <div className="rounded-xl border border-border bg-white p-3">
                                                     <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Net Payable</p>
-                                                    <p className="mt-1 text-lg font-bold text-primary">₹{Math.round(salarySummary.netSalary).toLocaleString("en-IN")}</p>
+                                                    <p className="mt-1 text-base font-bold text-primary">₹{Math.round(salarySummary.netSalary).toLocaleString("en-IN")}</p>
                                                 </div>
                                             </div>
                                         ) : !fetchingSalary ? (
