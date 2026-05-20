@@ -36,16 +36,71 @@ interface ReportSummary {
         totalAdvance: number;
         earned: number;
         netSalary: number;
+        rawAttendance?: {
+            date: string;
+            status: string;
+        }[];
     };
 }
 
 export default function ReportsClient() {
-    const [timeFilter, setTimeFilter] = useState<"daily" | "weekly" | "monthly" | "quarterly" | "yearly" | "all-time">("monthly");
+    const [timeFilter, setTimeFilter] = useState<"daily" | "weekly" | "monthly" | "quarterly" | "yearly" | "all-time" | "custom">("monthly");
     const [month, setMonth] = useState(new Date());
+    const [customStartDate, setCustomStartDate] = useState(() => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+    });
+    const [customEndDate, setCustomEndDate] = useState(() => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+    });
+    const [currentRange, setCurrentRange] = useState<{ start: string; end: string }>(() => {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0).toISOString();
+        const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+        return { start, end };
+    });
     const [search, setSearch] = useState("");
     const [data, setData] = useState<ReportSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState<string | null>(null);
+
+    const toIsoRange = (dateStr: string, endOfDay = false) => {
+        if (!dateStr) return "";
+        const suffix = endOfDay ? "T23:59:59.999Z" : "T00:00:00.000Z";
+        return new Date(`${dateStr}${suffix}`).toISOString();
+    };
+
+    const getDayLetter = (date: Date) => {
+        const letters = ["S", "M", "T", "W", "T", "F", "S"];
+        return letters[date.getDay()];
+    };
+
+    const getQuickViewDays = (startStr: string, endStr: string) => {
+        const start = new Date(startStr);
+        const end = new Date(endStr);
+        const diffTime = end.getTime() - start.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const dates: Date[] = [];
+        if (diffDays > 0 && diffDays <= 7) {
+            for (let i = 0; i < diffDays; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                dates.push(d);
+            }
+        } else {
+            const now = new Date();
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(now.setDate(diff));
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                dates.push(d);
+            }
+        }
+        return dates;
+    };
 
     const { 
         isOpen: previewOpen, 
@@ -101,6 +156,10 @@ export default function ReportsClient() {
                     start = "2020-01-01T00:00:00.000Z";
                     end = new Date().toISOString();
                     break;
+                case "custom":
+                    start = toIsoRange(customStartDate, false);
+                    end = toIsoRange(customEndDate, true);
+                    break;
                 default:
                     start = new Date(month.getFullYear(), month.getMonth(), 1).toISOString();
                     end = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59).toISOString();
@@ -108,6 +167,7 @@ export default function ReportsClient() {
 
             const res = await api.get(`/employee-report/all-summary?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
             setData(res.data?.data || []);
+            setCurrentRange({ start, end });
         } catch (error) {
             console.error("Failed to fetch reports", error);
         } finally {
@@ -117,7 +177,7 @@ export default function ReportsClient() {
 
     useEffect(() => {
         fetchReports();
-    }, [month, timeFilter]);
+    }, [month, timeFilter, customStartDate, customEndDate]);
 
     const filteredData = useMemo(() => {
         return data.filter(item =>
@@ -179,6 +239,11 @@ export default function ReportsClient() {
                 end = new Date().toISOString();
                 break;
             }
+            case "custom": {
+                start = toIsoRange(customStartDate, false);
+                end = toIsoRange(customEndDate, true);
+                break;
+            }
         }
 
         const endpoint = targetId === "bulk" ? "/pdf/bulk-employee-report" : "/pdf/employee-report";
@@ -223,12 +288,12 @@ export default function ReportsClient() {
 
                     <div className="flex flex-wrap items-center justify-end gap-3">
                         {/* Time Range Filter */}
-                        <div className="flex items-center rounded-2xl border border-border bg-white p-1.5 shadow-sm">
+                        <div className="flex flex-wrap items-center rounded-2xl border border-border bg-white p-1.5 shadow-sm gap-y-1">
                             <div className="flex items-center gap-2 px-3 pr-4 text-text-muted border-r border-border mr-1">
                                 <Filter size={14} />
                                 <span className="text-[10px] font-bold uppercase tracking-widest">Range</span>
                             </div>
-                            {(["daily", "weekly", "monthly", "quarterly", "yearly", "all-time"] as const).map((filter) => (
+                            {(["daily", "weekly", "monthly", "quarterly", "yearly", "all-time", "custom"] as const).map((filter) => (
                                 <button
                                     key={filter}
                                     onClick={() => setTimeFilter(filter)}
@@ -256,6 +321,30 @@ export default function ReportsClient() {
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+                        )}
+
+                        {timeFilter === "custom" && (
+                            <div className="flex items-center gap-3 rounded-2xl border border-border bg-white p-1.5 shadow-sm">
+                                <div className="flex items-center gap-2 pl-3">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">From</span>
+                                    <input
+                                        type="date"
+                                        value={customStartDate}
+                                        onChange={(e) => setCustomStartDate(e.target.value)}
+                                        className="h-9 rounded-xl border border-border/60 bg-transparent px-3 text-xs font-semibold text-text outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10"
+                                    />
+                                </div>
+                                <div className="h-5 w-px bg-border" />
+                                <div className="flex items-center gap-2 pr-3">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">To</span>
+                                    <input
+                                        type="date"
+                                        value={customEndDate}
+                                        onChange={(e) => setCustomEndDate(e.target.value)}
+                                        className="h-9 rounded-xl border border-border/60 bg-transparent px-3 text-xs font-semibold text-text outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10"
+                                    />
+                                </div>
                             </div>
                         )}
 
@@ -333,7 +422,43 @@ export default function ReportsClient() {
                                                 )}
                                                 <div>
                                                     <p className="font-semibold text-text">{item.employee.name}</p>
-                                                    <p className="text-[11px] text-text-muted">@{item.employee.userId} • {item.employee.role}</p>
+                                                    <p className="text-[11px] text-text-muted mb-1.5">@{item.employee.userId} • {item.employee.role}</p>
+                                                    
+                                                    {/* Quick View of Days */}
+                                                    <div className="flex items-center gap-1">
+                                                        {getQuickViewDays(currentRange.start, currentRange.end).map((date, idx) => {
+                                                            const dateKey = date.toISOString().split("T")[0];
+                                                            const record = item.summary.rawAttendance?.find(
+                                                                (r: any) => new Date(r.date).toISOString().split("T")[0] === dateKey
+                                                            );
+                                                            const status = record?.status;
+
+                                                            let badgeClass = "bg-muted/40 text-text-muted/60 border border-border/10";
+                                                            let titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Unmarked`;
+                                                            
+                                                            if (status === "present") {
+                                                                badgeClass = "bg-emerald-500 text-white shadow-[0_2px_8px_-2px_rgba(16,185,129,0.3)]";
+                                                                titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Present`;
+                                                            } else if (status === "absent") {
+                                                                badgeClass = "bg-red-500 text-white shadow-[0_2px_8px_-2px_rgba(239,68,68,0.3)]";
+                                                                titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Absent`;
+                                                            } else if (status === "half-day") {
+                                                                badgeClass = "bg-amber-500 text-white shadow-[0_2px_8px_-2px_rgba(245,158,11,0.3)]";
+                                                                titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Half-day`;
+                                                            }
+
+                                                            return (
+                                                                <div
+                                                                    key={idx}
+                                                                    title={titleText}
+                                                                    style={{ width: "18px", height: "18px" }}
+                                                                    className={`flex items-center justify-center rounded-full text-[8.5px] font-bold uppercase tracking-tighter cursor-help transition-all hover:scale-110 select-none ${badgeClass}`}
+                                                                >
+                                                                    {getDayLetter(date)}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>

@@ -58,6 +58,8 @@ export default function AttendanceSidePanel({
                                 <Image
                                     src={employeeImage}
                                     alt={employeeName}
+                                    width={40}
+                                    height={40}
                                     className="h-10 w-10 rounded-xl object-cover border border-border shadow-sm"
                                 />
                             )}

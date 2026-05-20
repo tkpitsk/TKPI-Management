@@ -28,6 +28,7 @@ export default function BulkAttendanceModal({
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [status, setStatus] = useState<AttendanceStatus>("present");
     const [advance, setAdvance] = useState("");
+    const [individualAdvances, setIndividualAdvances] = useState<Record<string, string>>({});
     const [reason, setReason] = useState("");
     
     // Date Range State
@@ -42,6 +43,12 @@ export default function BulkAttendanceModal({
 
     useEffect(() => {
         if (!open) return;
+
+        // Reset states on modal open
+        setSelectedIds(new Set());
+        setIndividualAdvances({});
+        setAdvance("");
+        setReason("");
 
         async function loadEmployees() {
             setLoading(true);
@@ -80,6 +87,19 @@ export default function BulkAttendanceModal({
         return diffDays > 0 ? diffDays : 0;
     }, [isRange, startDate, endDate]);
 
+    const totalAdvanceSum = useMemo(() => {
+        let sum = 0;
+        selectedIds.forEach((id) => {
+            const indVal = individualAdvances[id];
+            if (indVal !== undefined && indVal !== "") {
+                sum += Number(indVal);
+            } else {
+                sum += Number(advance || 0);
+            }
+        });
+        return Math.round(sum * daysCount);
+    }, [selectedIds, individualAdvances, advance, daysCount]);
+
     const toggleEmployee = (id: string) => {
         setSelectedIds(prev => {
             const next = new Set(prev);
@@ -108,6 +128,14 @@ export default function BulkAttendanceModal({
             return;
         }
 
+        // Prepare per-employee advances mapping for only the selected employees
+        const employeeAdvances: Record<string, number> = {};
+        selectedIds.forEach((id) => {
+            if (individualAdvances[id] !== undefined && individualAdvances[id] !== "") {
+                employeeAdvances[id] = Number(individualAdvances[id]);
+            }
+        });
+
         setSaving(true);
         try {
             await api.post("/attendance/bulk", {
@@ -117,6 +145,7 @@ export default function BulkAttendanceModal({
                 status,
                 advance: Number(advance || 0),
                 reason,
+                employeeAdvances,
             });
             await onSaved();
             onClose();
@@ -230,35 +259,62 @@ export default function BulkAttendanceModal({
                             ) : filteredEmployees.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     {filteredEmployees.map(e => (
-                                        <button
+                                        <div
                                             key={e._id}
                                             onClick={() => toggleEmployee(e._id)}
-                                            className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
+                                            className={`flex flex-col justify-between rounded-2xl border p-3.5 transition cursor-pointer select-none ${
                                                 selectedIds.has(e._id)
                                                     ? "border-brand-primary/30 bg-brand-primary/5 ring-1 ring-brand-primary/20"
                                                     : "border-border bg-white hover:border-brand-primary/30"
                                             }`}
                                         >
-                                            {e.image ? (
-                                                <img 
-                                                    src={e.image} 
-                                                    alt={e.name} 
-                                                    className="h-8 w-8 rounded-lg object-cover border border-border"
-                                                />
-                                            ) : (
-                                                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition ${
-                                                    selectedIds.has(e._id)
-                                                        ? "border-brand-primary bg-brand-primary text-white"
-                                                        : "border-border bg-muted/50 text-text-muted"
-                                                }`}>
-                                                    {selectedIds.has(e._id) ? <X size={14} strokeWidth={4} /> : <Users size={14} />}
+                                            <div className="flex items-center gap-3">
+                                                {e.image ? (
+                                                    <img 
+                                                        src={e.image} 
+                                                        alt={e.name} 
+                                                        className="h-9 w-9 rounded-xl object-cover border border-border"
+                                                    />
+                                                ) : (
+                                                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition ${
+                                                        selectedIds.has(e._id)
+                                                            ? "border-brand-primary bg-brand-primary text-white"
+                                                            : "border-border bg-muted/50 text-text-muted"
+                                                    }`}>
+                                                        {selectedIds.has(e._id) ? <X size={14} strokeWidth={4} /> : <Users size={14} />}
+                                                    </div>
+                                                )}
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-bold text-text leading-snug">{e.name}</p>
+                                                    <p className="text-[10px] text-text-muted uppercase tracking-wider font-semibold">{e.role} • {e.userId || e._id.slice(-6)}</p>
                                                 </div>
-                                            )}
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-sm font-semibold text-text">{e.name}</p>
-                                                <p className="text-[10px] text-text-muted uppercase tracking-wider">{e.role} • {e.userId || e._id.slice(-6)}</p>
                                             </div>
-                                        </button>
+
+                                            {/* Employee-specific Daily Advance Input */}
+                                            <div className="mt-3" onClick={(evt) => evt.stopPropagation()}>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-brand-primary uppercase tracking-widest">₹ Adv</span>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={individualAdvances[e._id] || ""}
+                                                        onChange={(evt) => {
+                                                            const val = evt.target.value;
+                                                            setIndividualAdvances(prev => ({
+                                                                ...prev,
+                                                                [e._id]: val
+                                                            }));
+                                                            // Auto-select the employee if they enter a custom advance amount
+                                                            if (val !== "" && Number(val) >= 0 && !selectedIds.has(e._id)) {
+                                                                toggleEmployee(e._id);
+                                                            }
+                                                        }}
+                                                        style={{ paddingLeft: "3.25rem" }}
+                                                        className="h-9 w-full rounded-xl border border-border bg-white pr-3 text-xs font-semibold text-text outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             ) : (
@@ -397,10 +453,10 @@ export default function BulkAttendanceModal({
                                         <span className="text-text-muted font-medium italic">Total Operations</span>
                                         <span className="font-bold text-brand-primary">{selectedIds.size * daysCount} Records</span>
                                     </div>
-                                    {Number(advance) > 0 && (
+                                    {totalAdvanceSum > 0 && (
                                         <div className="flex justify-between text-sm">
                                             <span className="text-text-muted">Total Advance</span>
-                                            <span className="font-bold text-amber-600">₹{Math.round(Number(advance) * selectedIds.size * daysCount).toLocaleString("en-IN")}</span>
+                                            <span className="font-bold text-amber-600">₹{totalAdvanceSum.toLocaleString("en-IN")}</span>
                                         </div>
                                     )}
                                 </div>

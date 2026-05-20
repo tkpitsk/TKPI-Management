@@ -6,6 +6,7 @@ import AttendanceCalendar from "@/components/attendance/AttendanceCalendar";
 import AttendanceSidePanel from "@/components/attendance/AttendanceSidePanel";
 import AttendanceModal from "@/components/attendance/AttendanceModal";
 import BulkAttendanceModal from "@/components/attendance/BulkAttendanceModal";
+import AutoMarkModal from "@/components/attendance/AutoMarkModal";
 import DailyOverviewModal from "@/components/shared/DailyOverviewModal";
 import SearchableEmployeeSelect from "@/components/ui/SearchableEmployeeSelect";
 import { useRouter } from "next/navigation";
@@ -43,6 +44,7 @@ export default function AttendanceClient() {
     const [panelMode, setPanelMode] = useState<PanelMode>("summary");
     const [modalOpen, setModalOpen] = useState(false);
     const [bulkModalOpen, setBulkModalOpen] = useState(false);
+    const [autoModalOpen, setAutoModalOpen] = useState(false);
     const [overviewOpen, setOverviewOpen] = useState(false);
     const [overviewDate, setOverviewDate] = useState<Date | null>(null);
 
@@ -216,6 +218,13 @@ export default function AttendanceClient() {
                                 Bulk Mark Attendance
                             </button>
 
+                            <button
+                                onClick={() => setAutoModalOpen(true)}
+                                className="rounded-2xl border border-emerald-500/20 bg-emerald-50/50 px-4 py-2.5 text-sm font-semibold text-emerald-600 transition hover:bg-emerald-500 hover:text-white shadow-sm"
+                            >
+                                Auto Mark Present
+                            </button>
+
                             {selectedDate && (
                                 <>
                                     <button
@@ -323,6 +332,15 @@ export default function AttendanceClient() {
                 onSaved={async () => {
                     await loadAttendance();
                     setBulkModalOpen(false);
+                }}
+            />
+
+            <AutoMarkModal
+                open={autoModalOpen}
+                onClose={() => setAutoModalOpen(false)}
+                onSaved={async () => {
+                    await loadAttendance();
+                    setAutoModalOpen(false);
                 }}
             />
 
