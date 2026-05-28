@@ -40,6 +40,7 @@ export default function BulkAttendanceModal({
     
     const [searchQuery, setSearchQuery] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("all");
+    const [sortOrder, setSortOrder] = useState<"a-z" | "z-a">("a-z");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -72,7 +73,7 @@ export default function BulkAttendanceModal({
     }, [open]);
 
     const filteredEmployees = useMemo(() => {
-        return employees.filter(e => {
+        const filtered = employees.filter(e => {
             const name = e.name || "";
             const userId = e.userId || "";
             const matchesSearch = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -80,7 +81,14 @@ export default function BulkAttendanceModal({
             const matchesRole = roleFilter === "all" || e.role === roleFilter;
             return matchesSearch && matchesRole;
         });
-    }, [employees, searchQuery, roleFilter]);
+
+        return filtered.sort((a, b) => {
+            const nameA = a.name || "";
+            const nameB = b.name || "";
+            if (sortOrder === "a-z") return nameA.localeCompare(nameB);
+            return nameB.localeCompare(nameA);
+        });
+    }, [employees, searchQuery, roleFilter, sortOrder]);
 
     const daysCount = useMemo(() => {
         if (!isRange) return 1;
@@ -243,6 +251,14 @@ export default function BulkAttendanceModal({
                                         className="h-11 w-full rounded-2xl border border-border bg-white pl-10 pr-4 text-sm outline-none transition focus:border-brand-primary"
                                     />
                                 </div>
+                                <select
+                                    value={sortOrder}
+                                    onChange={e => setSortOrder(e.target.value as "a-z" | "z-a")}
+                                    className="h-11 rounded-2xl border border-border bg-white px-4 text-sm outline-none transition focus:border-brand-primary"
+                                >
+                                    <option value="a-z">Sort A-Z</option>
+                                    <option value="z-a">Sort Z-A</option>
+                                </select>
                                 <select
                                     value={roleFilter}
                                     onChange={e => setRoleFilter(e.target.value)}

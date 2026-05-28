@@ -4,14 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import {
     Calendar,
-    Download,
     Eye,
     FileBarChart,
     FileText,
     Filter,
-    History,
     IndianRupee,
-    Loader2,
     Search,
     TrendingUp,
     Users,
@@ -62,6 +59,7 @@ export default function ReportsClient() {
         return { start, end };
     });
     const [search, setSearch] = useState("");
+    const [roleFilter, setRoleFilter] = useState("all");
     const [data, setData] = useState<ReportSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState<string | null>(null);
@@ -103,13 +101,13 @@ export default function ReportsClient() {
         return dates;
     };
 
-    const { 
-        isOpen: previewOpen, 
-        pdfUrl: previewUrl, 
-        title: previewTitle, 
-        preview: triggerPreview, 
-        close: closePreview, 
-        download: downloadPDF 
+    const {
+        isOpen: previewOpen,
+        pdfUrl: previewUrl,
+        title: previewTitle,
+        preview: triggerPreview,
+        close: closePreview,
+        download: downloadPDF
     } = usePDFPreview();
 
     const monthOptions = useMemo(() => {
@@ -180,12 +178,19 @@ export default function ReportsClient() {
         fetchReports();
     }, [month, timeFilter, customStartDate, customEndDate]);
 
+    const availableRoles = useMemo(() => {
+        const roles = new Set(data.map(item => item.employee.role).filter(Boolean));
+        return Array.from(roles).sort();
+    }, [data]);
+
     const filteredData = useMemo(() => {
-        return data.filter(item =>
-            item.employee.name.toLowerCase().includes(search.toLowerCase()) ||
-            item.employee.userId.toLowerCase().includes(search.toLowerCase())
-        );
-    }, [data, search]);
+        return data.filter(item => {
+            const matchesSearch = item.employee.name.toLowerCase().includes(search.toLowerCase()) ||
+                item.employee.userId.toLowerCase().includes(search.toLowerCase());
+            const matchesRole = roleFilter === "all" || item.employee.role === roleFilter;
+            return matchesSearch && matchesRole;
+        });
+    }, [data, search, roleFilter]);
 
     const totals = useMemo(() => {
         return filteredData.reduce((acc, curr) => ({
@@ -300,8 +305,8 @@ export default function ReportsClient() {
                                     key={filter}
                                     onClick={() => setTimeFilter(filter)}
                                     className={`rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all ${timeFilter === filter
-                                            ? "bg-brand-primary text-white shadow-md"
-                                            : "text-text-muted hover:bg-muted hover:text-text"
+                                        ? "bg-brand-primary text-white shadow-md"
+                                        : "text-text-muted hover:bg-muted hover:text-text"
                                         }`}
                                 >
                                     {filter.replace("-", " ")}
@@ -374,15 +379,27 @@ export default function ReportsClient() {
                 <div className="border-b border-border bg-surface/50 px-6 py-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <h2 className="text-sm font-bold uppercase tracking-widest text-text-muted">Employee Summary List</h2>
-                        <div className="relative w-full sm:max-w-xs">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search employee name or ID..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="h-10 w-full rounded-xl border border-border bg-white pl-10 pr-4 text-sm outline-none transition focus:border-brand-primary"
-                            />
+                        <div className="flex w-full sm:w-auto flex-col sm:flex-row items-center gap-3">
+                            <select
+                                value={roleFilter}
+                                onChange={(e) => setRoleFilter(e.target.value)}
+                                className="h-10 w-full sm:w-auto min-w-35 rounded-xl border border-border bg-white px-4 text-sm outline-none transition focus:border-brand-primary"
+                            >
+                                <option value="all">All Roles</option>
+                                {availableRoles.map(role => (
+                                    <option key={role} value={role}>{role}</option>
+                                ))}
+                            </select>
+                            <div className="relative w-full sm:max-w-xs">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search employee name or ID..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="h-10 w-full rounded-xl border border-border bg-white pl-10 pr-4 text-sm outline-none transition focus:border-brand-primary"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -426,7 +443,7 @@ export default function ReportsClient() {
                                                 <div>
                                                     <p className="font-semibold text-text">{item.employee.name}</p>
                                                     <p className="text-[11px] text-text-muted mb-1.5">@{item.employee.userId} • {item.employee.role}</p>
-                                                    
+
                                                     {/* Quick View of Days */}
                                                     <div className="flex items-center gap-1">
                                                         {getQuickViewDays(currentRange.start, currentRange.end).map((date, idx) => {
@@ -438,7 +455,7 @@ export default function ReportsClient() {
 
                                                             let badgeClass = "bg-muted/40 text-text-muted/60 border border-border/10";
                                                             let titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Unmarked`;
-                                                            
+
                                                             if (status === "present") {
                                                                 badgeClass = "bg-emerald-500 text-white shadow-[0_2px_8px_-2px_rgba(16,185,129,0.3)]";
                                                                 titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Present`;
@@ -481,10 +498,10 @@ export default function ReportsClient() {
                                                 </div>
                                             </div>
                                         </td>
-                                         <td className="px-6 py-4 text-right font-medium text-emerald-700">₹{item.summary.earned.toLocaleString("en-IN")}</td>
-                                         <td className="px-6 py-4 text-right font-medium text-amber-700">₹{item.summary.totalAdvance.toLocaleString("en-IN")}</td>
-                                         <td className="px-6 py-4 text-right font-medium text-indigo-700">₹{(item.summary.totalDeduction || 0).toLocaleString("en-IN")}</td>
-                                         <td className="px-6 py-4 text-right font-bold text-text">₹{item.summary.netSalary.toLocaleString("en-IN")}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-emerald-700">₹{item.summary.earned.toLocaleString("en-IN")}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-amber-700">₹{item.summary.totalAdvance.toLocaleString("en-IN")}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-indigo-700">₹{(item.summary.totalDeduction || 0).toLocaleString("en-IN")}</td>
+                                        <td className="px-6 py-4 text-right font-bold text-text">₹{item.summary.netSalary.toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-right">
                                             <button
                                                 disabled={loading}
@@ -497,11 +514,11 @@ export default function ReportsClient() {
                                         </td>
                                     </tr>
                                 ))
-                             ) : (
-                                 <tr>
-                                     <td colSpan={7} className="px-6 py-20 text-center text-text-muted italic">No records found matching your search.</td>
-                                 </tr>
-                             )}
+                            ) : (
+                                <tr>
+                                    <td colSpan={7} className="px-6 py-20 text-center text-text-muted italic">No records found matching your search.</td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
