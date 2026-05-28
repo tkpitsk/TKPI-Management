@@ -75,13 +75,20 @@ export default function ReportsClient() {
         return letters[date.getDay()];
     };
 
-    const getQuickViewDays = (startStr: string, endStr: string) => {
+    const getQuickViewDays = (startStr: string, endStr: string, filter: string) => {
         const start = new Date(startStr);
         const end = new Date(endStr);
         const diffTime = end.getTime() - start.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         const dates: Date[] = [];
-        if (diffDays > 0 && diffDays <= 7) {
+        
+        if (filter === "weekly") {
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                dates.push(d);
+            }
+        } else if (diffDays > 0 && diffDays <= 7) {
             for (let i = 0; i < diffDays; i++) {
                 const d = new Date(start);
                 d.setDate(start.getDate() + i);
@@ -446,7 +453,7 @@ export default function ReportsClient() {
 
                                                     {/* Quick View of Days */}
                                                     <div className="flex items-center gap-1">
-                                                        {getQuickViewDays(currentRange.start, currentRange.end).map((date, idx) => {
+                                                        {getQuickViewDays(currentRange.start, currentRange.end, timeFilter).map((date, idx) => {
                                                             const dateKey = date.toISOString().split("T")[0];
                                                             const record = item.summary.rawAttendance?.find(
                                                                 (r: any) => new Date(r.date).toISOString().split("T")[0] === dateKey
