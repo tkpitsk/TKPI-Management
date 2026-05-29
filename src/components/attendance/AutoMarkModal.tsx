@@ -13,11 +13,13 @@ export default function AutoMarkModal({
     onClose: () => void;
     onSaved: () => void | Promise<void>;
 }) {
-    const [date, setDate] = useState(() => {
+    const [dateType, setDateType] = useState<"single" | "range">("single");
+    const [startDate, setStartDate] = useState(() => {
         const today = new Date();
         return today.toISOString().split("T")[0];
     });
-    
+    const [endDate, setEndDate] = useState("");
+
     // Choose which roles to auto mark present
     const [selectedRoles, setSelectedRoles] = useState<string[]>(["employee", "worker"]);
     const [saving, setSaving] = useState(false);
@@ -52,8 +54,12 @@ export default function AutoMarkModal({
     };
 
     const handleRunAction = async () => {
-        if (!date) {
-            alert("Please select a date");
+        if (!startDate) {
+            alert("Please select a start date");
+            return;
+        }
+        if (dateType === "range" && !endDate) {
+            alert("Please select an end date");
             return;
         }
         if (selectedRoles.length === 0) {
@@ -65,10 +71,12 @@ export default function AutoMarkModal({
             setSaving(true);
             setResultMessage(null);
             
-            const targetDate = new Date(date);
+            const reqStartDate = new Date(startDate);
+            const reqEndDate = dateType === "range" && endDate ? new Date(endDate) : new Date(startDate);
             
             const res = await api.post("/attendance/auto-present", {
-                date: targetDate.toISOString(),
+                startDate: reqStartDate.toISOString(),
+                endDate: reqEndDate.toISOString(),
                 roles: selectedRoles
             });
 
@@ -145,20 +153,61 @@ export default function AutoMarkModal({
                         </div>
                     ) : (
                         <>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-text-muted">
-                                    Target Date
-                                </label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted">
-                                        <Calendar size={15} />
-                                    </span>
-                                    <input
-                                        type="date"
-                                        value={date}
-                                        onChange={(e) => setDate(e.target.value)}
-                                        className="h-11 w-full rounded-2xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-text outline-none transition focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
-                                    />
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold uppercase tracking-wider text-text-muted">
+                                        Date Selection
+                                    </label>
+                                    <div className="flex rounded-lg bg-muted p-1 border border-border">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDateType("single")}
+                                            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                                                dateType === "single"
+                                                    ? "bg-white text-text shadow-sm"
+                                                    : "text-text-muted hover:text-text"
+                                            }`}
+                                        >
+                                            Single Day
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDateType("range")}
+                                            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                                                dateType === "range"
+                                                    ? "bg-white text-text shadow-sm"
+                                                    : "text-text-muted hover:text-text"
+                                            }`}
+                                        >
+                                            Date Range
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className={`grid gap-3 ${dateType === "range" ? "sm:grid-cols-2" : "grid-cols-1"}`}>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted">
+                                            <Calendar size={15} />
+                                        </span>
+                                        <input
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="h-11 w-full rounded-2xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-text outline-none transition focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                        />
+                                    </div>
+                                    {dateType === "range" && (
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted">
+                                                <Calendar size={15} />
+                                            </span>
+                                            <input
+                                                type="date"
+                                                value={endDate}
+                                                onChange={(e) => setEndDate(e.target.value)}
+                                                className="h-11 w-full rounded-2xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-text outline-none transition focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
