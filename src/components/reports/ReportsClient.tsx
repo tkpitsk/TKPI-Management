@@ -34,6 +34,7 @@ interface ReportSummary {
         totalDeduction?: number;
         earned: number;
         netSalary: number;
+        netAdvance: number;
         rawAttendance?: {
             date: string;
             status: string;
@@ -418,7 +419,7 @@ export default function ReportsClient() {
                                 <th className="px-6 py-4">Employee</th>
                                 <th className="px-6 py-4 text-center">Attendance</th>
                                 <th className="px-6 py-4 text-right">Earned</th>
-                                <th className="px-6 py-4 text-right">Advance Given</th>
+                                <th className="px-6 py-4 text-right">Net Advance (Balance)</th>
                                 <th className="px-6 py-4 text-right">Repaid/Deducted</th>
                                 <th className="px-6 py-4 text-right">Net Payable</th>
                                 <th className="px-6 py-4 text-right">Action</th>
@@ -506,7 +507,7 @@ export default function ReportsClient() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-right font-medium text-emerald-700">₹{item.summary.earned.toLocaleString("en-IN")}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-amber-700">₹{item.summary.totalAdvance.toLocaleString("en-IN")}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-amber-700">₹{item.summary.netAdvance.toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-right font-medium text-indigo-700">₹{(item.summary.totalDeduction || 0).toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-right font-bold text-text">₹{item.summary.netSalary.toLocaleString("en-IN")}</td>
                                         <td className="px-6 py-4 text-right">

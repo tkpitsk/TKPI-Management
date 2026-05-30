@@ -46,6 +46,7 @@ interface DashboardResponse {
         totalAdvance: number;
         totalDeduction?: number;
         netSalary: number;
+        netAdvance: number;
     };
     records: AttendanceRecord[];
 }
@@ -452,6 +453,11 @@ export default function EmployeeDetailClient({
                             <SummaryRow
                                 label="Net salary"
                                 value={loading ? "--" : formatCurrency(salary?.netSalary || 0)}
+                                tone="default"
+                            />
+                            <SummaryRow
+                                label="Net Advance (Balance)"
+                                value={loading ? "--" : formatCurrency(salary?.netAdvance || 0)}
                                 tone="defaultStrong"
                             />
                         </div>

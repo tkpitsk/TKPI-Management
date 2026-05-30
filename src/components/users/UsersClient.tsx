@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import CreateUserModal from "@/components/users/CreateUserModal";
 import EditUserModal from "@/components/users/EditUserModal";
+import ViewUserModal from "@/components/users/ViewUserModal";
+import { Eye } from "lucide-react";
 
 interface User {
     _id: string;
@@ -27,7 +29,37 @@ interface User {
     salaryType?: "monthly" | "weekly" | "daily";
     salaryAmount?: number;
     isActive: boolean;
+    salaryAmount?: number;
+    isActive: boolean;
     image?: string;
+    
+    dob?: string;
+    address?: string;
+    aadharPhoto?: string;
+    panPhoto?: string;
+    designation?: string;
+    reportingTime?: string;
+    workDescription?: string;
+    joiningDate?: string;
+    familyMembersCount?: number;
+    familyDependents?: string;
+    previousWorkplace?: string;
+    previousDesignation?: string;
+    reasonForLeaving?: string;
+    salaryPaymentDate?: number;
+    iqTestResult?: string;
+    kgTestResult?: string;
+    personType?: string;
+    significantAction?: string;
+    employeeClassification?: string;
+    incentivesProvided?: string;
+    additionalBenefits?: string;
+    bankAccount?: {
+        accountNumber?: string;
+        ifscCode?: string;
+        bankName?: string;
+    };
+    
     createdAt: string;
     updatedAt: string;
 }
@@ -42,6 +74,7 @@ export default function UsersClient() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [editModalOpen, setEditModalOpen] = useState(false);
+    const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [modalMode, setModalMode] = useState<"edit" | "delete">("edit");
 
@@ -151,6 +184,11 @@ export default function UsersClient() {
     const handleEditUser = (user: User) => {
         setSelectedUser(user);
         setEditModalOpen(true);
+    };
+
+    const handleViewUser = (user: User) => {
+        setSelectedUser(user);
+        setViewModalOpen(true);
     };
 
     if (loading) {
@@ -383,6 +421,14 @@ export default function UsersClient() {
                                         <td className="px-5 py-4">
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
+                                                    onClick={() => handleViewUser(user)}
+                                                    className="inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 text-xs font-medium text-text transition hover:bg-muted"
+                                                >
+                                                    <Eye size={14} />
+                                                    View
+                                                </button>
+
+                                                <button
                                                     onClick={() => handleEditUser(user)}
                                                     className="inline-flex items-center gap-1 rounded-xl border border-border px-3 py-2 text-xs font-medium text-text transition hover:bg-muted"
                                                 >
@@ -433,6 +479,15 @@ export default function UsersClient() {
                     setSelectedUser(null);
                 }}
                 onUpdated={fetchUsers}
+            />
+
+            <ViewUserModal
+                open={viewModalOpen}
+                user={selectedUser}
+                onClose={() => {
+                    setViewModalOpen(false);
+                    setSelectedUser(null);
+                }}
             />
         </div>
     );
