@@ -38,20 +38,28 @@ interface ReportSummary {
         rawAttendance?: {
             date: string;
             status: string;
+            reason?: string;
         }[];
     };
 }
+
+const getLocalDateString = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 export default function ReportsClient() {
     const [timeFilter, setTimeFilter] = useState<"daily" | "weekly" | "monthly" | "quarterly" | "yearly" | "all-time" | "custom">("monthly");
     const [month, setMonth] = useState(new Date());
     const [customStartDate, setCustomStartDate] = useState(() => {
         const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+        return getLocalDateString(new Date(now.getFullYear(), now.getMonth(), 1));
     });
     const [customEndDate, setCustomEndDate] = useState(() => {
         const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+        return getLocalDateString(new Date(now.getFullYear(), now.getMonth() + 1, 0));
     });
     const [currentRange, setCurrentRange] = useState<{ start: string; end: string }>(() => {
         const now = new Date();
@@ -455,9 +463,9 @@ export default function ReportsClient() {
                                                     {/* Quick View of Days */}
                                                     <div className="flex items-center gap-1">
                                                         {getQuickViewDays(currentRange.start, currentRange.end, timeFilter).map((date, idx) => {
-                                                            const dateKey = date.toISOString().split("T")[0];
+                                                            const dateKey = getLocalDateString(date);
                                                             const record = item.summary.rawAttendance?.find(
-                                                                (r: any) => new Date(r.date).toISOString().split("T")[0] === dateKey
+                                                                (r: any) => getLocalDateString(new Date(r.date)) === dateKey
                                                             );
                                                             const status = record?.status;
 
@@ -469,10 +477,10 @@ export default function ReportsClient() {
                                                                 titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Present`;
                                                             } else if (status === "absent") {
                                                                 badgeClass = "bg-red-500 text-white shadow-[0_2px_8px_-2px_rgba(239,68,68,0.3)]";
-                                                                titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Absent`;
+                                                                titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Absent${record?.reason ? ` - Reason: ${record.reason}` : ""}`;
                                                             } else if (status === "half-day") {
                                                                 badgeClass = "bg-amber-500 text-white shadow-[0_2px_8px_-2px_rgba(245,158,11,0.3)]";
-                                                                titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Half-day`;
+                                                                titleText = `${date.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" })}: Half-day${record?.reason ? ` - Reason: ${record.reason}` : ""}`;
                                                             }
 
                                                             return (

@@ -60,6 +60,9 @@ export default function AttendanceClient() {
     const monthRange = useMemo(() => {
         const start = new Date(month.getFullYear(), month.getMonth(), 1);
         const end = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+        
+        // Ensure the end date covers the entire last day of the month
+        end.setHours(23, 59, 59, 999);
 
         return {
             start,
