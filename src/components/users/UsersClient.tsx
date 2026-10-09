@@ -29,8 +29,6 @@ interface User {
     salaryType?: "monthly" | "weekly" | "daily";
     salaryAmount?: number;
     isActive: boolean;
-    salaryAmount?: number;
-    isActive: boolean;
     image?: string;
     
     dob?: string;
