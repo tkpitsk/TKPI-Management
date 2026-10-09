@@ -44,13 +44,14 @@ export interface Product {
   standards?: string[];
   certifications?: string[];
 
-  images: ProductImage[];
+  galleryImages: ProductImage[];
   brochure?: ProductImage;
 
   inquiryEnabled: boolean;
   featured?: boolean;
   popular?: boolean;
   status: "active" | "inactive";
+  variantCount?: number;
 
   createdAt: string;
   updatedAt: string;

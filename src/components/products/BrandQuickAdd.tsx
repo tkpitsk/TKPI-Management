@@ -40,8 +40,8 @@ export default function BrandQuickAdd({
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+            <div className="bg-white w-full max-w-md rounded-[32px] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between border-b border-border p-6 bg-muted/20">
                     <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-brand-primary/10 flex items-center justify-center">

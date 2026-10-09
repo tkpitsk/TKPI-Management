@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import { Plus, Search, Calendar, IndianRupee, ArrowUpRight, ArrowDownRight, History } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { format } from "date-fns";
+import SupplierRateModal from "./SupplierRateModal";
 
 interface Rate {
     supplierName: string;
@@ -17,6 +18,7 @@ export default function SupplierRatesClient() {
     const [matrix, setMatrix] = useState<Rate[]>([]);
     const [loading, setLoading] = useState(true);
     const [showHistory, setShowHistory] = useState(false);
+    const [showModal, setShowModal] = useState(false);
 
     const fetchMatrix = async () => {
         try {
@@ -57,7 +59,10 @@ export default function SupplierRatesClient() {
                         <History className="h-5 w-5" />
                         History
                     </button>
-                    <button className="flex items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-95">
+                    <button 
+                        onClick={() => setShowModal(true)}
+                        className="flex items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-95"
+                    >
                         <Plus className="h-5 w-5" />
                         Update Today's Rate
                     </button>
@@ -111,6 +116,16 @@ export default function SupplierRatesClient() {
                     ))
                 )}
             </div>
+
+            {showModal && (
+                <SupplierRateModal 
+                    onClose={() => setShowModal(false)}
+                    onSuccess={() => {
+                        setShowModal(false);
+                        fetchMatrix();
+                    }}
+                />
+            )}
         </div>
     );
 }

@@ -129,7 +129,7 @@ export default function ProductVariantsTab({
                                 <input 
                                     type="number"
                                     step="0.001"
-                                    value={variant.sectionalWeight}
+                                    value={variant.sectionalWeight || ""}
                                     onChange={(e) => updateVariant(idx, { sectionalWeight: Number(e.target.value) })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                     placeholder="e.g. 3.8"
@@ -138,7 +138,7 @@ export default function ProductVariantsTab({
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Material Grade</label>
                                 <input 
-                                    value={variant.grade}
+                                    value={variant.grade || ""}
                                     onChange={(e) => updateVariant(idx, { grade: e.target.value })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                     placeholder="e.g. Fe 500D / E250"
@@ -147,7 +147,7 @@ export default function ProductVariantsTab({
                             <div className="space-y-2">
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Finish</label>
                                 <input 
-                                    value={variant.finishType}
+                                    value={variant.finishType || ""}
                                     onChange={(e) => updateVariant(idx, { finishType: e.target.value })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                     placeholder="e.g. MS / GI"
@@ -157,7 +157,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Length (meters)</label>
                                 <input 
                                     type="number"
-                                    value={variant.dimensions?.length}
+                                    value={variant.dimensions?.length || ""}
                                     onChange={(e) => updateDimensions(idx, { length: Number(e.target.value) })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                     placeholder="e.g. 6"
@@ -171,7 +171,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Thickness (mm)</label>
                                 <input 
                                     type="number"
-                                    value={variant.dimensions?.thickness}
+                                    value={variant.dimensions?.thickness || ""}
                                     onChange={(e) => updateDimensions(idx, { thickness: Number(e.target.value) })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                 />
@@ -180,7 +180,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Outer Diameter (mm)</label>
                                 <input 
                                     type="number"
-                                    value={variant.dimensions?.outerDiameter}
+                                    value={variant.dimensions?.outerDiameter || ""}
                                     onChange={(e) => updateDimensions(idx, { outerDiameter: Number(e.target.value) })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                 />
@@ -189,7 +189,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Width (mm)</label>
                                 <input 
                                     type="number"
-                                    value={variant.dimensions?.width}
+                                    value={variant.dimensions?.width || ""}
                                     onChange={(e) => updateDimensions(idx, { width: Number(e.target.value) })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                 />
@@ -198,7 +198,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Wall Thick (mm)</label>
                                 <input 
                                     type="number"
-                                    value={variant.dimensions?.wallThickness}
+                                    value={variant.dimensions?.wallThickness || ""}
                                     onChange={(e) => updateDimensions(idx, { wallThickness: Number(e.target.value) })}
                                     className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm focus:border-brand-primary outline-none"
                                 />
@@ -214,7 +214,7 @@ export default function ProductVariantsTab({
                                 </div>
                                 <input 
                                     type="number"
-                                    value={variant.pricingFactors?.difference}
+                                    value={variant.pricingFactors?.difference || ""}
                                     onChange={(e) => updateVariant(idx, { 
                                         pricingFactors: { ...variant.pricingFactors, difference: Number(e.target.value) } 
                                     })}
@@ -225,7 +225,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-black uppercase tracking-widest text-text">Transport</label>
                                 <input 
                                     type="number"
-                                    value={variant.pricingFactors?.transport}
+                                    value={variant.pricingFactors?.transport || ""}
                                     onChange={(e) => updateVariant(idx, { 
                                         pricingFactors: { ...variant.pricingFactors, transport: Number(e.target.value) } 
                                     })}
@@ -236,7 +236,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-black uppercase tracking-widest text-text">Loading</label>
                                 <input 
                                     type="number"
-                                    value={variant.pricingFactors?.loading}
+                                    value={variant.pricingFactors?.loading || ""}
                                     onChange={(e) => updateVariant(idx, { 
                                         pricingFactors: { ...variant.pricingFactors, loading: Number(e.target.value) } 
                                     })}
@@ -247,7 +247,7 @@ export default function ProductVariantsTab({
                                 <label className="text-[10px] font-black uppercase tracking-widest text-text">Unloading</label>
                                 <input 
                                     type="number"
-                                    value={variant.pricingFactors?.unloading}
+                                    value={variant.pricingFactors?.unloading || ""}
                                     onChange={(e) => updateVariant(idx, { 
                                         pricingFactors: { ...variant.pricingFactors, unloading: Number(e.target.value) } 
                                     })}

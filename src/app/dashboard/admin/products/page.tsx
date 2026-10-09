@@ -9,8 +9,11 @@ import {
 } from "@/services/product.service";
 import Image from "next/image";
 import ProductModal from "@/components/products/ProductModal";
-import { Search, Plus, Filter, MoreVertical, Layers, Package, Zap, ChevronRight, Edit3, Trash2, Globe, Star } from "lucide-react";
+import { Search, Plus, Filter, MoreVertical, Layers, Package, Zap, ChevronRight, Edit3, Trash2, Globe, Star, RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
+import api from "@/lib/api";
+// TS reload trigger
+import CategoryManagerModal from "@/components/products/CategoryManagerModal";
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
@@ -19,7 +22,9 @@ export default function ProductsPage() {
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [showModal, setShowModal] = useState(false);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [editData, setEditData] = useState<ProductWithVariants | undefined>();
+    const [categoriesCount, setCategoriesCount] = useState(0);
 
     const fetchProducts = async () => {
         try {
@@ -27,6 +32,9 @@ export default function ProductsPage() {
             const data = await getProductsAdmin();
             setProducts(data);
             setFiltered(data);
+
+            const catRes = await api.get("/categories");
+            setCategoriesCount(catRes.data.length);
         } catch (err: any) {
             toast.error(err.message || "Failed to fetch products");
         } finally {
@@ -42,7 +50,7 @@ export default function ProductsPage() {
         const q = search.toLowerCase();
         const result = products.filter(p =>
             p.name.toLowerCase().includes(q) ||
-            (typeof p.category !== "string" && p.category?.name.toLowerCase().includes(q))
+            ((p as any).categoryId?.name?.toLowerCase().includes(q) || (typeof p.category !== "string" && p.category?.name.toLowerCase().includes(q)))
         );
         setFiltered(result);
     }, [search, products]);
@@ -86,23 +94,39 @@ export default function ProductsPage() {
                         Centralized control for your industrial steel catalog and technical data.
                     </p>
                 </div>
-                <button
-                    onClick={() => {
-                        setEditData(undefined);
-                        setShowModal(true);
-                    }}
-                    className="flex items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-95"
-                >
-                    <Plus className="h-5 w-5" />
-                    New Product
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={fetchProducts}
+                        className="flex items-center justify-center gap-2 rounded-2xl bg-muted px-4 py-3.5 text-sm font-semibold text-text-muted hover:text-text shadow-sm transition-all hover:bg-muted/80 active:scale-95"
+                        title="Refresh Products"
+                    >
+                        <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
+                    </button>
+                    <button
+                        onClick={() => setShowCategoryModal(true)}
+                        className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-6 py-3.5 text-sm font-semibold text-text shadow-sm transition-all hover:bg-muted active:scale-95"
+                    >
+                        <Layers className="h-5 w-5 text-brand-primary" />
+                        <span className="hidden sm:inline">Categories</span>
+                    </button>
+                    <button
+                        onClick={() => {
+                            setEditData(undefined);
+                            setShowModal(true);
+                        }}
+                        className="flex items-center justify-center gap-2 rounded-2xl bg-brand-primary px-6 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:opacity-90 active:scale-95"
+                    >
+                        <Plus className="h-5 w-5" />
+                        <span className="hidden sm:inline">New Product</span>
+                    </button>
+                </div>
             </div>
 
             {/* Stats Overview */}
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                     { label: "Total Products", value: products.length, icon: Package, color: "bg-blue-500" },
-                    { label: "Active Categories", value: "28", icon: Layers, color: "bg-emerald-500" },
+                    { label: "Active Categories", value: categoriesCount.toString(), icon: Layers, color: "bg-emerald-500" },
                     { label: "Market Ready", value: products.filter(p => p.status === "active").length, icon: Zap, color: "bg-indigo-500" },
                 ].map((stat, i) => (
                     <div key={i} className="group rounded-[32px] border border-border bg-surface p-6 transition-all hover:border-brand-primary/30 hover:shadow-xl">
@@ -161,7 +185,7 @@ export default function ProductsPage() {
                             <thead>
                                 <tr className="bg-muted/30">
                                     <th className="px-8 py-6 text-sm font-bold uppercase tracking-widest text-text-muted border-b border-border">Product Details</th>
-                                    <th className="px-8 py-6 text-sm font-bold uppercase tracking-widest text-text-muted border-b border-border">Categorization</th>
+                                    <th className="px-8 py-6 text-sm font-bold uppercase tracking-widest text-text-muted border-b border-border">Category</th>
                                     <th className="px-8 py-6 text-sm font-bold uppercase tracking-widest text-text-muted border-b border-border">Market Status</th>
                                     <th className="px-8 py-6 text-sm font-bold uppercase tracking-widest text-text-muted border-b border-border">Specifications</th>
                                     <th className="px-8 py-6 text-sm font-bold uppercase tracking-widest text-text-muted border-b border-border text-right">Actions</th>
@@ -173,8 +197,8 @@ export default function ProductsPage() {
                                         <td className="px-8 py-6">
                                             <div className="flex items-center gap-4">
                                                 <div className="relative h-16 w-16 overflow-hidden rounded-2xl bg-muted border border-border group-hover:border-brand-primary/30 transition-all">
-                                                    {product.images?.[0] ? (
-                                                        <Image src={product.images[0].url} alt={product.name} fill className="object-cover" />
+                                                    {product.galleryImages?.[0] ? (
+                                                        <Image src={product.galleryImages[0].url} alt={product.name} fill className="object-cover" />
                                                     ) : (
                                                         <div className="flex h-full w-full items-center justify-center text-text-muted">
                                                             <Package className="h-6 w-6" />
@@ -193,7 +217,7 @@ export default function ProductsPage() {
                                         <td className="px-8 py-6">
                                             <div className="flex flex-col gap-1">
                                                 <span className="text-sm font-semibold text-text">
-                                                    {typeof product.category === "string" ? "Uncategorized" : product.category?.name}
+                                                    {(product as any).categoryId?.name || (typeof product.category === "string" ? "Uncategorized" : product.category?.name) || "Uncategorized"}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-widest bg-muted px-2 py-0.5 rounded-lg inline-block w-fit">
                                                     {product.productType}
@@ -201,11 +225,10 @@ export default function ProductsPage() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-tighter ${
-                                                product.status === "active"
-                                                    ? "bg-emerald-500/10 text-emerald-600" 
+                                            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-tighter ${product.status === "active"
+                                                    ? "bg-emerald-500/10 text-emerald-600"
                                                     : "bg-red-500/10 text-red-600"
-                                            }`}>
+                                                }`}>
                                                 <span className={`h-1.5 w-1.5 rounded-full ${product.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
                                                 {product.status === "active" ? "Active" : "Inactive"}
                                             </span>
@@ -214,7 +237,7 @@ export default function ProductsPage() {
                                             <div className="flex items-center gap-4">
                                                 <div className="text-center border-r border-border pr-4">
                                                     <p className="text-[10px] font-bold text-text-muted uppercase">Variants</p>
-                                                    <p className="text-sm font-black text-text">5</p>
+                                                    <p className="text-sm font-black text-text">{product.variantCount || 0}</p>
                                                 </div>
                                                 <div className="text-center">
                                                     <p className="text-[10px] font-bold text-text-muted uppercase">HSN</p>
@@ -224,13 +247,13 @@ export default function ProductsPage() {
                                         </td>
                                         <td className="px-8 py-6 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button 
+                                                <button
                                                     onClick={() => handleEdit(product)}
                                                     className="p-2.5 rounded-xl text-text-muted hover:bg-muted hover:text-brand-primary transition-all"
                                                 >
                                                     <Edit3 className="h-5 w-5" />
                                                 </button>
-                                                <button 
+                                                <button
                                                     onClick={() => handleDelete(product._id)}
                                                     className="p-2.5 rounded-xl text-text-muted hover:bg-red-50 hover:text-red-600 transition-all"
                                                 >
@@ -256,6 +279,14 @@ export default function ProductsPage() {
                         fetchProducts();
                     }}
                     editData={editData}
+                />
+            )}
+            {showCategoryModal && (
+                <CategoryManagerModal
+                    onClose={() => {
+                        setShowCategoryModal(false);
+                        fetchProducts();
+                    }}
                 />
             )}
         </div>

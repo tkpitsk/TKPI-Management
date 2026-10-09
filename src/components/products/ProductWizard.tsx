@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ProductForm } from "@/types/productForm";
 import { ProductWithVariants } from "@/types/product";
-import { createProduct, updateProduct } from "@/services/product.service";
+import { createProduct, updateProduct, createVariants, updateVariant } from "@/services/product.service";
 import ProductGeneralTab from "./tabs/ProductGeneralTab";
 import ProductSpecsTab from "./tabs/ProductSpecsTab";
 import ProductMediaTab from "./tabs/ProductMediaTab";
@@ -53,7 +53,7 @@ export default function ProductWizard({
             setForm({
                 name: product.name,
                 hsnCode: product.hsnCode || "",
-                categoryId: typeof product.category === "string" ? product.category : product.category._id,
+                categoryId: typeof (product as any).categoryId === "string" ? (product as any).categoryId : (product as any).categoryId?._id || typeof product.category === "string" ? product.category : product.category?._id || "",
                 brandId: typeof product.brandId === "string" ? product.brandId : (product.brandId as any)?._id || "",
                 shortDescription: product.shortDescription || "",
                 longDescription: product.longDescription || "",
@@ -70,7 +70,7 @@ export default function ProductWizard({
                 inquiryEnabled: product.inquiryEnabled !== false,
                 status: product.status || "active",
                 galleryImages: [],
-                existingGalleryImages: product.images || [],
+                existingGalleryImages: product.galleryImages || [],
                 removedGalleryImages: [],
                 variants: variants.map(v => ({
                     _id: v._id,
@@ -78,8 +78,9 @@ export default function ProductWizard({
                     sku: v.sku || "",
                     dimensions: v.dimensions || {},
                     unit: v.unit || "kg",
-                    weightPerUnit: String(v.weightPerUnit || ""),
-                    materialGrade: v.materialGrade || "",
+                    grade: v.grade || "",
+                    finishType: v.finishType || "",
+                    sectionalWeight: v.sectionalWeight || undefined,
                     technicalSpecs: v.technicalSpecs || {},
                     pricingFactors: v.pricingFactors || { difference: 0, transport: 0, loading: 0, unloading: 0, gstPercentage: 18 },
                     status: v.status || "active",
@@ -124,19 +125,42 @@ export default function ProductWizard({
             // Brochure
             if (form.brochure) formData.append("brochure", form.brochure);
 
-            let product;
             if (isEdit) {
-                product = await updateProduct(editData!.product._id, formData);
+                const prodId = editData!.product._id;
+                await updateProduct(prodId, formData);
+                
+                const formatVariant = (v: any) => ({
+                    ...v,
+                    productId: prodId,
+                    weightPerUnit: v.weightPerUnit ? Number(v.weightPerUnit) : undefined
+                });
+
+                const existingVariants = form.variants.filter(v => v._id);
+                const newVariants = form.variants.filter(v => !v._id);
+                
+                if (existingVariants.length > 0) {
+                    await Promise.all(existingVariants.map(v => updateVariant(v._id!, formatVariant(v) as any)));
+                }
+                if (newVariants.length > 0) {
+                    await createVariants(prodId, { variants: newVariants.map(formatVariant) as any });
+                }
+                
                 toast.success("Product updated successfully");
             } else {
-                product = await createProduct(formData);
+                const product = await createProduct(formData);
+                
+                const formatVariant = (v: any) => ({
+                    ...v,
+                    productId: product._id,
+                    weightPerUnit: v.weightPerUnit ? Number(v.weightPerUnit) : undefined
+                });
+                
+                if (form.variants && form.variants.length > 0) {
+                    await createVariants(product._id, { variants: form.variants.map(formatVariant) as any });
+                }
+                
                 toast.success("Product created successfully");
             }
-
-            // Variants (handled separately in backend usually, or we can send them too)
-            // For now, assume updateProduct handles them if we add them to form data, 
-            // but my previous controllers expected separate calls.
-            // I'll stick to the previous pattern for stability but update them in a future step if needed.
 
             onClose();
         } catch (error: any) {
