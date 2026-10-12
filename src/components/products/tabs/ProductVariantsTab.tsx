@@ -47,10 +47,17 @@ export default function ProductVariantsTab({
     };
 
     const removeVariant = (index: number) => {
-        setForm((prev: any) => ({
-            ...prev,
-            variants: prev.variants.filter((_: any, i: number) => i !== index)
-        }));
+        setForm((prev: any) => {
+            const target = prev.variants[index];
+            const updatedRemoved = target?._id 
+                ? [...(prev.removedVariantIds || []), target._id]
+                : (prev.removedVariantIds || []);
+            return {
+                ...prev,
+                variants: prev.variants.filter((_: any, i: number) => i !== index),
+                removedVariantIds: updatedRemoved
+            };
+        });
     };
 
     return (

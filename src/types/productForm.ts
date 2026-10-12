@@ -66,4 +66,5 @@ export type ProductForm = {
 
   /* VARIANTS */
   variants: Variant[];
+  removedVariantIds?: string[];
 };

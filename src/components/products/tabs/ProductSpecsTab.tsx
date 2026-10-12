@@ -48,7 +48,9 @@ function ArrayInputComponent({ form, setForm, field, label, placeholder }: any) 
         <div className="space-y-3">
             <label className="text-xs font-bold uppercase tracking-widest text-text-muted">{label}</label>
             <div className="flex flex-wrap gap-2">
-                {(form[field] || []).map((item: string, i: number) => (
+                {(form[field] || [])
+                    .filter((item: string) => typeof item === "string" && item.trim() !== "" && item !== "[]")
+                    .map((item: string, i: number) => (
                     <span key={i} className="inline-flex items-center gap-1 rounded-lg bg-brand-primary/10 px-3 py-1.5 text-xs font-bold text-brand-primary">
                         {item}
                         <button 

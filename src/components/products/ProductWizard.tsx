@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ProductForm } from "@/types/productForm";
 import { ProductWithVariants } from "@/types/product";
-import { createProduct, updateProduct, createVariants, updateVariant } from "@/services/product.service";
+import { createProduct, updateProduct, createVariants, updateVariant, deleteVariantPermanently } from "@/services/product.service";
 import ProductGeneralTab from "./tabs/ProductGeneralTab";
 import ProductSpecsTab from "./tabs/ProductSpecsTab";
 import ProductMediaTab from "./tabs/ProductMediaTab";
@@ -72,6 +72,22 @@ export default function ProductWizard({
                 resolvedBrandId = String(br._id || br.id || "");
             }
 
+            const cleanArray = (val: any): string[] => {
+                if (!val) return [];
+                if (typeof val === "string") {
+                    try {
+                        const parsed = JSON.parse(val);
+                        if (Array.isArray(parsed)) return parsed.filter(x => typeof x === "string" && x.trim() !== "" && x !== "[]");
+                    } catch {}
+                    if (val === "[]" || val.trim() === "") return [];
+                    return [val];
+                }
+                if (Array.isArray(val)) {
+                    return val.filter(x => typeof x === "string" && x.trim() !== "" && x !== "[]");
+                }
+                return [];
+            };
+
             const initialData: ProductForm = {
                 name: product.name || "",
                 hsnCode: product.hsnCode || "",
@@ -80,13 +96,13 @@ export default function ProductWizard({
                 shortDescription: product.shortDescription || "",
                 longDescription: product.longDescription || "",
                 overview: product.overview || "",
-                applications: product.applications || [],
-                industriesUsed: product.industriesUsed || [],
-                advantages: product.advantages || [],
-                features: product.features || [],
+                applications: cleanArray(product.applications),
+                industriesUsed: cleanArray(product.industriesUsed),
+                advantages: cleanArray(product.advantages),
+                features: cleanArray(product.features),
                 manufacturingProcess: product.manufacturingProcess || "",
-                standards: product.standards || [],
-                certifications: product.certifications || [],
+                standards: cleanArray(product.standards),
+                certifications: cleanArray(product.certifications),
                 featured: !!product.featured,
                 popular: !!product.popular,
                 inquiryEnabled: product.inquiryEnabled !== false,
@@ -151,7 +167,8 @@ export default function ProductWizard({
     });
 
     const hasNewUploads = form.galleryImages.length > 0 || form.removedGalleryImages.length > 0 || !!form.brochure;
-    const isDirty = !isEdit || (initialFormState !== "" && (currentFormState !== initialFormState || hasNewUploads));
+    const hasRemovedVariants = (form.removedVariantIds && form.removedVariantIds.length > 0);
+    const isDirty = !isEdit || (initialFormState !== "" && (currentFormState !== initialFormState || hasNewUploads || hasRemovedVariants));
 
     const canSubmit = isEdit ? (isFormValid && isDirty) : isFormValid;
 
@@ -177,8 +194,12 @@ export default function ProductWizard({
                 "overview", "manufacturingProcess", "status", "featured", "popular", "inquiryEnabled"
             ];
             fieldsToAppend.forEach(field => {
-                if ((form as any)[field] !== undefined) {
-                    formData.append(field, String((form as any)[field]));
+                const val = (form as any)[field];
+                if (val !== undefined && val !== null) {
+                    if (field === "brandId" && String(val).trim() === "") {
+                        return; // Omit empty brandId so backend doesn't cast empty string to ObjectId
+                    }
+                    formData.append(field, String(val));
                 }
             });
 
@@ -208,6 +229,22 @@ export default function ProductWizard({
                 const existingVariants = form.variants.filter(v => v._id);
                 const newVariants = form.variants.filter(v => !v._id);
                 
+                // Validate that any newly added variant has a name
+                const invalidNew = newVariants.find(v => !v.variantName || !v.variantName.trim());
+                if (invalidNew) {
+                    toast.error("Please enter a name for the new SKU / Variant in the SKUs tab.");
+                    setActiveTab("variants");
+                    setLoading(false);
+                    return;
+                }
+
+                // Delete any variants that user removed in the modal
+                if (form.removedVariantIds && form.removedVariantIds.length > 0) {
+                    await Promise.all(
+                        form.removedVariantIds.map(varId => deleteVariantPermanently(varId))
+                    );
+                }
+
                 if (existingVariants.length > 0) {
                     await Promise.all(existingVariants.map(v => updateVariant(v._id!, formatVariant(v) as any)));
                 }
@@ -224,6 +261,15 @@ export default function ProductWizard({
                     productId: product._id,
                     weightPerUnit: v.weightPerUnit ? Number(v.weightPerUnit) : undefined
                 });
+
+                // Validate that any newly added variant has a name
+                const invalidNew = form.variants.find(v => !v.variantName || !v.variantName.trim());
+                if (invalidNew) {
+                    toast.error("Please enter a name for the new SKU / Variant in the SKUs tab.");
+                    setActiveTab("variants");
+                    setLoading(false);
+                    return;
+                }
                 
                 if (form.variants && form.variants.length > 0) {
                     await createVariants(product._id, { variants: form.variants.map(formatVariant) as any });
@@ -234,7 +280,9 @@ export default function ProductWizard({
 
             onClose();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to save product");
+            console.error("Product submit error:", error);
+            const errorMsg = error?.message || error?.response?.data?.message || "Failed to save product";
+            toast.error(errorMsg);
         } finally {
             setLoading(false);
         }

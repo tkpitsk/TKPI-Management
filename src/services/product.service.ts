@@ -180,3 +180,14 @@ export const deactivateVariant = async (
     return handleError(error);
   }
 };
+
+export const deleteVariantPermanently = async (
+  id: string
+): Promise<{ message: string }> => {
+  try {
+    const res = await api.delete(`/products/variants/${id}`);
+    return res.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
