@@ -5,7 +5,8 @@ import { Product, ProductWithVariants } from "@/types/product";
 import {
     getProductsAdmin,
     deactivateProduct,
-    getProductBySlug
+    getProductBySlug,
+    getProductById
 } from "@/services/product.service";
 import Image from "next/image";
 import ProductModal from "@/components/products/ProductModal";
@@ -70,7 +71,9 @@ export default function ProductsClient() {
 
     const handleEdit = async (product: Product) => {
         try {
-            const data = await getProductBySlug(product.slug);
+            const data = product._id
+                ? await getProductById(product._id)
+                : await getProductBySlug(product.slug);
             setEditData(data);
             setShowModal(true);
         } catch {

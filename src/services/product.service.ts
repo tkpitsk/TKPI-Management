@@ -54,7 +54,18 @@ export const getProductBySlug = async (
   slug: string
 ): Promise<ProductWithVariants> => {
   try {
-    const res = await api.get(`/products/slug/${slug}`);
+    const res = await api.get(`/products/slug/${slug}?includeInactive=true`);
+    return res.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+export const getProductById = async (
+  id: string
+): Promise<ProductWithVariants> => {
+  try {
+    const res = await api.get(`/products/${id}`);
     return res.data;
   } catch (error) {
     return handleError(error);
