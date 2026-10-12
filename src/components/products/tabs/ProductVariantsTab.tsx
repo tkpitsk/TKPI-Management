@@ -57,7 +57,11 @@ export default function ProductVariantsTab({
         <div className="grid gap-6 p-6">
             <div className="flex items-center justify-between border-b border-border pb-4">
                 <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-bold text-text uppercase tracking-widest">Product SKUs & Variants</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-text uppercase tracking-widest">
+                            Product SKUs & Variants <span className="text-[10px] text-text-muted font-normal lowercase">(optional)</span>
+                        </h3>
+                    </div>
                     <p className="text-[10px] text-text-muted uppercase tracking-tighter flex items-center gap-1">
                         <Info className="h-3 w-3" />
                         SKU IDs will be auto-generated based on Category Short Code

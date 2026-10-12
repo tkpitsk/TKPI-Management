@@ -5,12 +5,13 @@ import { Product, ProductWithVariants } from "@/types/product";
 import {
     getProductsAdmin,
     deactivateProduct,
+    deleteProductPermanent,
     getProductBySlug,
     getProductById
 } from "@/services/product.service";
 import Image from "next/image";
 import ProductModal from "@/components/products/ProductModal";
-import { Search, Plus, Filter, Layers, Package, Zap, Edit3, Trash2, Globe, RefreshCw } from "lucide-react";
+import { Search, Plus, Filter, Layers, Package, Zap, Edit3, Trash2, Globe, RefreshCw, AlertTriangle, X } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/lib/api";
 import CategoryManagerModal from "@/components/products/CategoryManagerModal";
@@ -25,6 +26,10 @@ export default function ProductsClient() {
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [editData, setEditData] = useState<ProductWithVariants | undefined>();
     const [categoriesCount, setCategoriesCount] = useState(0);
+
+    // Custom Confirmation Modal state
+    const [deleteModalProduct, setDeleteModalProduct] = useState<Product | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchProducts = async () => {
         try {
@@ -55,17 +60,30 @@ export default function ProductsClient() {
         setFiltered(result);
     }, [search, products]);
 
-    const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to deactivate this product?")) return;
-        setActionLoading(id);
+    const openDeleteModal = (product: Product) => {
+        setDeleteModalProduct(product);
+    };
+
+    const executeDeleteAction = async () => {
+        if (!deleteModalProduct) return;
+        const prod = deleteModalProduct;
+        setIsDeleting(true);
         try {
-            await deactivateProduct(id);
-            toast.success("Product deactivated");
+            if (prod.status === "inactive") {
+                // Second delete: Permanent deletion
+                await deleteProductPermanent(prod._id);
+                toast.success(`"${prod.name}" permanently deleted`);
+            } else {
+                // First delete: Deactivate
+                await deactivateProduct(prod._id);
+                toast.success(`"${prod.name}" deactivated`);
+            }
+            setDeleteModalProduct(null);
             fetchProducts();
         } catch (err: any) {
-            toast.error(err.message || "Failed to delete");
+            toast.error(err.message || "Failed to process request");
         } finally {
-            setActionLoading(null);
+            setIsDeleting(false);
         }
     };
 
@@ -256,8 +274,13 @@ export default function ProductsClient() {
                                                     <Edit3 className="h-5 w-5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(product._id)}
-                                                    className="p-2.5 rounded-xl text-text-muted hover:bg-red-50 hover:text-red-600 transition-all"
+                                                    onClick={() => openDeleteModal(product)}
+                                                    className={`p-2.5 rounded-xl transition-all ${
+                                                        product.status === "inactive"
+                                                            ? "text-red-500 hover:bg-red-500/10 hover:text-red-700"
+                                                            : "text-text-muted hover:bg-amber-50 hover:text-amber-600"
+                                                    }`}
+                                                    title={product.status === "inactive" ? "Permanently Delete Product" : "Deactivate Product"}
                                                 >
                                                     <Trash2 className="h-5 w-5" />
                                                 </button>
@@ -290,6 +313,103 @@ export default function ProductsClient() {
                         fetchProducts();
                     }}
                 />
+            )}
+
+            {/* CUSTOM PROFESSIONAL CONFIRMATION MODAL */}
+            {deleteModalProduct && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+                    <div className="w-full max-w-md rounded-[28px] border border-border bg-surface p-6 sm:p-7 shadow-2xl animate-in zoom-in-95 duration-150">
+                        {/* Header */}
+                        <div className="flex items-start justify-between">
+                            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+                                deleteModalProduct.status === "inactive"
+                                    ? "bg-red-500/10 text-red-600"
+                                    : "bg-amber-500/10 text-amber-600"
+                            }`}>
+                                <AlertTriangle className="h-6 w-6" />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setDeleteModalProduct(null)}
+                                className="rounded-full p-2 text-text-muted hover:bg-muted hover:text-text transition-colors"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        {/* Title & Warning Message */}
+                        <div className="mt-5 space-y-2">
+                            <h3 className="text-xl font-bold text-text">
+                                {deleteModalProduct.status === "inactive"
+                                    ? "Permanently Delete Product?"
+                                    : "Deactivate Product?"}
+                            </h3>
+                            <p className="text-sm text-text-muted leading-relaxed">
+                                {deleteModalProduct.status === "inactive" ? (
+                                    <>
+                                        This product is currently <span className="font-semibold text-amber-600">Inactive</span>. Pressing delete will <span className="font-bold text-red-600">permanently erase</span> <span className="font-semibold text-text">"{deleteModalProduct.name}"</span>, its SKUs, and stock records from the database. This action <span className="font-bold text-red-600">cannot be undone</span>.
+                                    </>
+                                ) : (
+                                    <>
+                                        Are you sure you want to deactivate <span className="font-semibold text-text">"{deleteModalProduct.name}"</span>? It will be safely hidden from the customer storefront catalog and marked as inactive.
+                                    </>
+                                )}
+                            </p>
+                        </div>
+
+                        {/* Product Summary Snippet */}
+                        <div className="mt-4 rounded-2xl bg-muted/30 border border-border p-3.5 flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-muted overflow-hidden relative shrink-0">
+                                {deleteModalProduct.galleryImages?.[0] ? (
+                                    <Image src={deleteModalProduct.galleryImages[0].url} alt="" fill className="object-cover" />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-text-muted">
+                                        <Package className="h-4 w-4" />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-bold text-text">{deleteModalProduct.name}</p>
+                                <p className="text-[10px] text-text-muted">HSN: {deleteModalProduct.hsnCode || "Pending"} • Status: <span className="capitalize font-semibold">{deleteModalProduct.status}</span></p>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="mt-6 flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteModalProduct(null)}
+                                disabled={isDeleting}
+                                className="rounded-xl px-5 py-2.5 text-xs font-semibold text-text-muted hover:bg-muted hover:text-text transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={executeDeleteAction}
+                                disabled={isDeleting}
+                                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all active:scale-95 disabled:opacity-50 ${
+                                    deleteModalProduct.status === "inactive"
+                                        ? "bg-red-600 hover:bg-red-700"
+                                        : "bg-amber-600 hover:bg-amber-700"
+                                }`}
+                            >
+                                {isDeleting ? (
+                                    "Processing..."
+                                ) : deleteModalProduct.status === "inactive" ? (
+                                    <>
+                                        <Trash2 className="h-4 w-4" />
+                                        Permanently Delete
+                                    </>
+                                ) : (
+                                    <>
+                                        Deactivate Product
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

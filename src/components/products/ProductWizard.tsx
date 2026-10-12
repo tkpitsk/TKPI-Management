@@ -47,14 +47,36 @@ export default function ProductWizard({
         variants: []
     });
 
+    // Track initial form snapshot for update dirty check
+    const [initialFormState, setInitialFormState] = useState<string>("");
+
     useEffect(() => {
         if (editData) {
             const { product, variants } = editData;
-            setForm({
-                name: product.name,
+
+            // Robust categoryId resolution
+            let resolvedCategoryId = "";
+            const cat = (product as any).categoryId ?? (product as any).category;
+            if (typeof cat === "string") {
+                resolvedCategoryId = cat;
+            } else if (cat && typeof cat === "object") {
+                resolvedCategoryId = String(cat._id || cat.id || "");
+            }
+
+            // Robust brandId resolution
+            let resolvedBrandId = "";
+            const br = (product as any).brandId ?? (product as any).brand;
+            if (typeof br === "string") {
+                resolvedBrandId = br;
+            } else if (br && typeof br === "object") {
+                resolvedBrandId = String(br._id || br.id || "");
+            }
+
+            const initialData: ProductForm = {
+                name: product.name || "",
                 hsnCode: product.hsnCode || "",
-                categoryId: typeof (product as any).categoryId === "string" ? (product as any).categoryId : (product as any).categoryId?._id || typeof product.category === "string" ? product.category : product.category?._id || "",
-                brandId: typeof product.brandId === "string" ? product.brandId : (product.brandId as any)?._id || "",
+                categoryId: resolvedCategoryId,
+                brandId: resolvedBrandId,
                 shortDescription: product.shortDescription || "",
                 longDescription: product.longDescription || "",
                 overview: product.overview || "",
@@ -72,7 +94,7 @@ export default function ProductWizard({
                 galleryImages: [],
                 existingGalleryImages: product.galleryImages || [],
                 removedGalleryImages: [],
-                variants: variants.map(v => ({
+                variants: (variants || []).map(v => ({
                     _id: v._id,
                     variantName: v.variantName || (v as any).size || "Standard",
                     sku: v.sku || "",
@@ -86,14 +108,62 @@ export default function ProductWizard({
                     status: v.status || "active",
                     trackStock: !!v.trackStock
                 }))
-            });
+            };
+
+            setForm(initialData);
+            setInitialFormState(JSON.stringify({
+                name: initialData.name,
+                hsnCode: initialData.hsnCode,
+                categoryId: initialData.categoryId,
+                brandId: initialData.brandId,
+                shortDescription: initialData.shortDescription,
+                longDescription: initialData.longDescription,
+                status: initialData.status,
+                inquiryEnabled: initialData.inquiryEnabled,
+                variants: initialData.variants,
+                existingGalleryImages: initialData.existingGalleryImages
+            }));
         }
     }, [editData]);
 
+    // Mandatory validation checks (Only Product Name and Category are required)
+    const hasName = !!form.name?.trim();
+    const hasCategory = !!form.categoryId;
+
+    const isFormValid = hasName && hasCategory;
+
+    const missingFields: string[] = [];
+    if (!hasName) missingFields.push("Product Name");
+    if (!hasCategory) missingFields.push("Category");
+
+    // Dirty check for Update mode: has user changed anything?
+    const currentFormState = JSON.stringify({
+        name: form.name,
+        hsnCode: form.hsnCode,
+        categoryId: form.categoryId,
+        brandId: form.brandId,
+        shortDescription: form.shortDescription,
+        longDescription: form.longDescription,
+        status: form.status,
+        inquiryEnabled: form.inquiryEnabled,
+        variants: form.variants,
+        existingGalleryImages: form.existingGalleryImages
+    });
+
+    const hasNewUploads = form.galleryImages.length > 0 || form.removedGalleryImages.length > 0 || !!form.brochure;
+    const isDirty = !isEdit || (initialFormState !== "" && (currentFormState !== initialFormState || hasNewUploads));
+
+    const canSubmit = isEdit ? (isFormValid && isDirty) : isFormValid;
+
     const handleSubmit = async () => {
-        if (!form.name || !form.categoryId) {
-            toast.error("Product name and Category are required");
+        if (!isFormValid) {
+            toast.error(`Please fill mandatory fields: ${missingFields.join(", ")}`);
             setActiveTab("general");
+            return;
+        }
+
+        if (isEdit && !isDirty) {
+            toast("No changes detected to update.");
             return;
         }
 
@@ -171,10 +241,10 @@ export default function ProductWizard({
     };
 
     const tabs = [
-        { id: "general", label: "General Information", icon: Layers },
-        { id: "specs", label: "Technical Specs", icon: ListChecks },
-        { id: "media", label: "Assets & Media", icon: ImageIcon },
-        { id: "variants", label: "Product SKUs", icon: Box },
+        { id: "general", label: "General Information", icon: Layers, hasError: !hasName || !hasCategory },
+        { id: "specs", label: "Technical Specs", icon: ListChecks, hasError: false },
+        { id: "media", label: "Assets & Media", icon: ImageIcon, hasError: false },
+        { id: "variants", label: "Product SKUs", icon: Box, hasError: false },
     ];
 
     return (
@@ -184,7 +254,7 @@ export default function ProductWizard({
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-2 border-b-2 px-6 py-4 text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
+                        className={`flex items-center gap-2 border-b-2 px-6 py-4 text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap relative ${
                             activeTab === tab.id 
                                 ? "border-brand-primary text-brand-primary" 
                                 : "border-transparent text-text-muted hover:text-text hover:bg-muted/50"
@@ -192,6 +262,9 @@ export default function ProductWizard({
                     >
                         <tab.icon className="h-4 w-4" />
                         {tab.label}
+                        {tab.hasError && (
+                            <span className="h-2 w-2 rounded-full bg-red-500" title="Missing required information in this tab" />
+                        )}
                     </button>
                 ))}
             </div>
@@ -203,15 +276,26 @@ export default function ProductWizard({
                 {activeTab === "variants" && <ProductVariantsTab form={form} setForm={setForm} />}
             </div>
 
-            <div className="flex items-center justify-between border-t border-border bg-muted/20 p-6">
+            {/* FOOTER */}
+            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border bg-muted/20 p-6 gap-4">
                 <button 
                     onClick={onClose}
-                    className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-text-muted hover:text-text transition-all"
+                    className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-text-muted hover:text-text transition-all order-2 sm:order-1"
                 >
                     <X className="h-4 w-4" />
                     Discard Changes
                 </button>
-                <div className="flex items-center gap-3">
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto order-1 sm:order-2">
+                    {!isFormValid ? (
+                        <div className="text-[11px] text-amber-700 font-medium bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl">
+                            Required: {missingFields.join(", ")}
+                        </div>
+                    ) : isEdit && !isDirty ? (
+                        <div className="text-[11px] text-text-muted font-medium bg-muted/50 border border-border px-3 py-1.5 rounded-xl">
+                            No changes made
+                        </div>
+                    ) : null}
                     <button 
                         onClick={() => {
                             const currentIdx = tabs.findIndex(t => t.id === activeTab);
@@ -224,8 +308,19 @@ export default function ProductWizard({
                     </button>
                     <button 
                         onClick={handleSubmit}
-                        disabled={loading}
-                        className="flex items-center gap-2 rounded-xl bg-brand-primary px-8 py-2.5 text-sm font-bold text-white shadow-lg hover:opacity-90 active:scale-95 disabled:opacity-50 transition-all"
+                        disabled={loading || !canSubmit}
+                        className={`flex items-center justify-center gap-2 rounded-xl px-8 py-2.5 text-sm font-bold shadow-lg transition-all ${
+                            canSubmit && !loading
+                                ? "bg-brand-primary text-white hover:opacity-90 active:scale-95 cursor-pointer"
+                                : "bg-muted text-text-muted cursor-not-allowed opacity-60"
+                        }`}
+                        title={
+                            !isFormValid
+                                ? `Complete required fields: ${missingFields.join(", ")}`
+                                : isEdit && !isDirty
+                                ? "Make at least one change to enable update"
+                                : ""
+                        }
                     >
                         {loading ? "Saving..." : (isEdit ? "Update Product" : "Launch Product")}
                         <Save className="h-4 w-4" />

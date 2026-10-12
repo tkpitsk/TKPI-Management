@@ -157,6 +157,17 @@ export const deactivateProduct = async (
   }
 };
 
+export const deleteProductPermanent = async (
+  id: string
+): Promise<{ message: string }> => {
+  try {
+    const res = await api.delete(`/products/${id}`);
+    return res.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
 export const deactivateVariant = async (
   id: string
 ): Promise<{ message: string }> => {

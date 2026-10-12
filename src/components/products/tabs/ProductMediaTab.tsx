@@ -38,7 +38,9 @@ export default function ProductMediaTab({
     return (
         <div className="grid gap-8 p-6">
             <div className="space-y-4">
-                <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Product Gallery</label>
+                <label className="text-xs font-bold uppercase tracking-widest text-text-muted">
+                    Product Gallery <span className="text-text-muted/60 font-normal">(Optional)</span>
+                </label>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     {/* Existing Images */}
                     {form.existingGalleryImages.map((img) => (
