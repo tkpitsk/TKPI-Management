@@ -105,7 +105,7 @@ export default function Sidebar() {
           {(isAdmin || isManager) && (
             <SidebarSection title="Management">
               {managementNav
-                .filter((item) => isAdmin || item.label === "Reports")
+                .filter((item) => isAdmin || item.label === "Reports" || item.label === "Products")
                 .map((item) => (
                   <NavLink
                     key={item.href}

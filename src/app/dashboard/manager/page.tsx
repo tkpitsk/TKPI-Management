@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/auth-context";
 import Link from "next/link";
-import { CalendarCheck, BellRing, ArrowRight, FileBarChart, Users } from "lucide-react";
+import { CalendarCheck, BellRing, ArrowRight, FileBarChart, Users, Package } from "lucide-react";
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
@@ -18,7 +18,13 @@ export default function ManagerDashboard() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <QuickActionCard
+          title="Products"
+          description="View and manage industrial product catalog, categories, and variants."
+          href="/dashboard/manager/products"
+          icon={<Package className="h-6 w-6 text-brand-primary" />}
+        />
         <QuickActionCard
           title="Attendance"
           description="Mark daily attendance and manage employee advances."
